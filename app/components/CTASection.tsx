@@ -3,7 +3,7 @@ import FadeInUp from "./FadeInUp";
 
 const CTASection = () => {
   return (
-    <section className="relative bg-gradient-to-br from-amber-300 via-amber-400 to-yellow-200 py-24 overflow-hidden">
+    <section className="relative bg-gradient-to-br from-amber-300 via-amber-400 to-yellow-200 py-8 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-yellow-300/20 to-amber-300/20"></div>
       <div className="absolute top-20 left-20 w-72 h-72 bg-amber-200/40 rounded-full blur-3xl animate-pulse"></div>
       <div className="absolute bottom-20 right-20 w-96 h-96 bg-yellow-200/40 rounded-full blur-3xl animate-pulse delay-1000"></div>

@@ -6,12 +6,9 @@ import { Star, ArrowRight } from "lucide-react";
 const HeroSection = () => {
   return (
     <section className="relative min-h-screen bg-white flex items-center overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0">
-        
-      </div>
+      <div className="absolute inset-0"></div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center max-w-5xl mx-auto">
           <FadeInUp delay={200}>
             <div className="inline-flex items-center space-x-2 bg-yellow-100/80 backdrop-blur-md px-6 py-3 rounded-full border border-yellow-300 shadow-md mb-8">
@@ -43,8 +40,8 @@ const HeroSection = () => {
             <div className="space-y-4 mb-12">
               <p className="text-2xl md:text-3xl text-gray-700 font-medium">
                 <span className="text-yellow-500 font-bold">Bite-Sized</span> •{" "}
-                <span className="text-yellow-700 font-bold">Role-Specific</span> •{" "}
-                <span className="text-yellow-500 font-bold">Actionable</span>
+                <span className="text-yellow-500 font-bold">Role-Specific</span>{" "}
+                • <span className="text-yellow-500 font-bold">Actionable</span>
               </p>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
                 Transform complex AI breakthroughs into personalized insights
