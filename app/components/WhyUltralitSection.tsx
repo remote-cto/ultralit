@@ -12,11 +12,11 @@ const WhyUltralitSection = () => {
                 <h2 className="text-5xl md:text-6xl font-bold text-gray-800 mb-8">
                   Why <span className="text-yellow-500">Ultralit</span>?
                 </h2>
-                <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
+                <div className="w-24 h-1 bg-yellow-400 mx-auto mb-4"></div>
               </div>
             </FadeInUp>
 
-            <div className="space-y-8 text-center">
+            <div className="space-y-4 text-center">
               <FadeInUp delay={200}>
                 <p className="text-2xl text-gray-700 leading-relaxed">
                   The AI revolution isn't waiting. Every breakthrough reshapes
