@@ -1,5 +1,7 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../contexts/AuthContext";
 
 const AuthForm = () => {
   const [isRegister, setIsRegister] = useState(false);
@@ -15,6 +17,9 @@ const AuthForm = () => {
     zipCode: "",
     country: "",
   });
+
+  const router = useRouter();
+  const { login } = useAuth();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -85,6 +90,20 @@ const AuthForm = () => {
 
       if (response.ok) {
         setMessage("Login successful! Welcome back.");
+        
+        // Get user data from the response or fetch user profile
+        const userData = {
+          name: data.user?.name || "User", // Fallback if name not available
+          email: formData.email,
+          phone: data.user?.phone,
+          profession: data.user?.profession,
+          zipCode: data.user?.zipCode,
+          country: data.user?.country,
+        };
+
+        // Update authentication context
+        login(userData);
+
         // Reset form and OTP state
         setFormData({
           name: "",
@@ -96,7 +115,11 @@ const AuthForm = () => {
         });
         setOtp("");
         setShowOtpField(false);
-        // Here you can redirect user or set authentication state
+
+        // Redirect to home page after a short delay
+        setTimeout(() => {
+          router.push("/");
+        }, 1500);
       } else {
         setMessage(data.error || "Invalid OTP. Please try again.");
       }
