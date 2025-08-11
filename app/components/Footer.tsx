@@ -8,7 +8,7 @@ interface FooterProps {
 const Footer: React.FC<FooterProps> = ({ className = "" }) => {
   return (
     <footer className={`bg-white py-8 px-4 ${className}`}>
-      <div className="max-w-7xl mx-auto font-[Inter]">
+      <div className="max-w-7xl mx-auto">
         {/* Main Footer Content */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
           {/* Same logo as Header */}
