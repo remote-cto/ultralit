@@ -156,7 +156,7 @@ const AuthForm = () => {
         const data = await response.json();
 
         if (response.ok) {
-          setMessage("Registration successful! Please check your email.");
+          setMessage("Registration successful!");
           // Reset form
           setFormData({
             name: "",

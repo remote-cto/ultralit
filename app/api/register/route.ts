@@ -52,20 +52,21 @@ export async function POST(request: NextRequest) {
     ]);
     
     const newUser = result.rows[0];
-    
-    // Create default user preferences if profession is provided
+  
     if (validatedData.profession) {
+      // If selection is supposed to be a SMALLINT (1 = knowledge, 2 = learning)
+      // Based on your error, it seems like this column expects a number, not a string
       const insertPreferenceQuery = `
         INSERT INTO user_preference (user_id, profession, language, selection, active)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id
       `;
-      
+
       await pool.query(insertPreferenceQuery, [
         newUser.id,
         validatedData.profession,
         'en', 
-        'knowledge', 
+        1, // Use 1 for 'knowledge' instead of the string 'knowledge'
         true
       ]);
     }
@@ -88,25 +89,24 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Registration error:', error);
     
-  
-if (error instanceof z.ZodError) {
-  return NextResponse.json(
-    { 
-      error: 'Validation failed',
-      details: error.issues 
-    },
-    { status: 400 }
-  );
-}
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { 
+          error: 'Validation failed',
+          details: error.issues 
+        },
+        { status: 400 }
+      );
+    }
     
-  
-   // Handle database errors
-if (error && typeof error === 'object' && 'code' in error && error.code === '23505') { 
-  return NextResponse.json(
-    { error: 'User with this email already exists' },
-    { status: 400 }
-  );
-}
+    // Handle database errors
+    if (error && typeof error === 'object' && 'code' in error && error.code === '23505') { 
+      return NextResponse.json(
+        { error: 'User with this email already exists' },
+        { status: 400 }
+      );
+    }
+    
     // Generic error response
     return NextResponse.json(
       { error: 'Internal server error' },
