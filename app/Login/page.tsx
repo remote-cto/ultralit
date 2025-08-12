@@ -90,18 +90,17 @@ const AuthForm = () => {
 
       if (response.ok) {
         setMessage("Login successful! Welcome back.");
-        
+
         // Get user data from the response or fetch user profile
         const userData = {
-          name: data.user?.name || "User", // Fallback if name not available
+          id: data.user?.id, // ✅ include the id from API
+          name: data.user?.name || "User",
           email: formData.email,
           phone: data.user?.phone,
           profession: data.user?.profession,
           zipCode: data.user?.zipCode,
           country: data.user?.country,
         };
-
-        // Update authentication context
         login(userData);
 
         // Reset form and OTP state
@@ -188,9 +187,9 @@ const AuthForm = () => {
     setShowOtpField(false);
     setOtp("");
     setMessage("");
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      email: ""
+      email: "",
     }));
   };
 
