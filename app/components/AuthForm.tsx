@@ -1,3 +1,5 @@
+//app/components/AuthForm.tsx
+
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -89,11 +91,11 @@ const AuthForm = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage("Login successful! Welcome back.");
+        setMessage("Login successful! Redirecting...");
 
-        // Get user data from the response or fetch user profile
+        // Get user data from the response
         const userData = {
-          id: data.user?.id, // ✅ include the id from API
+          id: data.user?.id,
           name: data.user?.name || "User",
           email: formData.email,
           phone: data.user?.phone,
@@ -115,9 +117,18 @@ const AuthForm = () => {
         setOtp("");
         setShowOtpField(false);
 
-        // Redirect to home page after a short delay
+        // Check if user has completed onboarding (preferences)
+        const hasPreferences = localStorage.getItem('userPreferences');
+        
+        // Redirect to preferences page for new users, or home for returning users
         setTimeout(() => {
-          router.push("/");
+          if (hasPreferences && data.user?.hasActiveSubscription) {
+            router.push("/dashboard");
+          } else if (hasPreferences) {
+            router.push("/payment");
+          } else {
+            router.push("/preferences");
+          }
         }, 1500);
       } else {
         setMessage(data.error || "Invalid OTP. Please try again.");
@@ -156,7 +167,7 @@ const AuthForm = () => {
         const data = await response.json();
 
         if (response.ok) {
-          setMessage("Registration successful!");
+          setMessage("Registration successful! Please login to continue.");
           // Reset form
           setFormData({
             name: "",
@@ -166,7 +177,7 @@ const AuthForm = () => {
             zipCode: "",
             country: "",
           });
-          // Optionally switch to login form
+          // Switch to login form after registration
           setTimeout(() => setIsRegister(false), 2000);
         } else {
           setMessage(data.error || "Registration failed. Please try again.");
@@ -197,15 +208,23 @@ const AuthForm = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50 px-4 py-12">
       <div className="max-w-md w-full bg-white shadow-xl rounded-2xl p-8 border border-yellow-300">
         {/* Title */}
-        <h2 className="text-3xl font-bold text-center mb-6 text-blue-800">
-          {isRegister ? "Create Account" : "Login"}
-        </h2>
+        <div className="text-center mb-6">
+          <h1 className="text-4xl font-bold text-blue-800 mb-2">
+            <span className="text-yellow-500">Ultralit</span>
+          </h1>
+          <h2 className="text-2xl font-bold text-blue-800">
+            {isRegister ? "Create Account" : "Welcome Back"}
+          </h2>
+          <p className="text-gray-600 mt-2">
+            {isRegister ? "Join the AI learning community" : "Sign in to continue your learning"}
+          </p>
+        </div>
 
         {/* Message Display */}
         {message && (
           <div
             className={`mb-4 p-3 rounded-lg text-center text-sm ${
-              message.includes("successful") || message.includes("sent")
+              message.includes("successful") || message.includes("sent") || message.includes("Redirecting")
                 ? "bg-green-100 text-green-700 border border-green-300"
                 : "bg-red-100 text-red-700 border border-red-300"
             }`}
@@ -356,7 +375,7 @@ const AuthForm = () => {
                 isLoading ? "opacity-70 cursor-not-allowed" : ""
               }`}
             >
-              {isLoading ? "Verifying..." : "Verify OTP & Login"}
+              {isLoading ? "Verifying..." : "Verify OTP & Continue"}
             </button>
           )}
         </div>
@@ -385,6 +404,18 @@ const AuthForm = () => {
             {isRegister ? "Login" : "Sign Up"}
           </button>
         </p>
+
+        {/* Progress indicator for new users */}
+        {!isRegister && (
+          <div className="flex justify-center mt-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+              <div className="w-8 h-1 bg-gray-300"></div>
+              <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              <span className="ml-4 text-sm text-gray-600">Step 1 of 3</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,298 @@
+//app/components/PaymentPage.tsx
+"use client"
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../contexts/AuthContext';
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
+const PaymentPage = () => {
+  const { isAuthenticated, user } = useAuth();
+  const router = useRouter();
+  const [userPreferences, setUserPreferences] = useState<any>(null);
+
+  useEffect(() => {
+    // Check if user is authenticated and has preferences
+    if (!isAuthenticated) {
+      router.push('/auth');
+      return;
+    }
+
+    const savedPreferences = localStorage.getItem('userPreferences');
+    if (savedPreferences) {
+      setUserPreferences(JSON.parse(savedPreferences));
+    }
+  }, [isAuthenticated, router]);
+
+  const plans = [
+    {
+      name: "Free Trial",
+      price: "7 Days",
+      amount: 0,
+      period: " Free",
+      description: "Experience everything with no commitment",
+      icon: "🚀",
+      features: [
+        "All AI content access",
+        "Daily updates",
+        "Basic support",
+        "No commitment"
+      ],
+      buttonColor: "from-green-500 to-emerald-500",
+      popular: false
+    },
+    {
+      name: "Students",
+      price: "₹200",
+      amount: 200,
+      period: "/month",
+      description: "Perfect for learners and aspiring professionals",
+      icon: "🎓",
+      features: [
+        "All learning content",
+        "Student community access",
+        "Practice exercises",
+        "Email support"
+      ],
+      buttonColor: "from-blue-500 to-cyan-500",
+      popular: false
+    },
+    {
+      name: "Professionals & Executives",
+      price: "₹500",
+      amount: 500,
+      period: "/month",
+      description: "For working professionals and business leaders",
+      icon: "💼",
+      features: [
+        "Premium content access",
+        "Executive insights",
+        "Priority support",
+        "Advanced resources"
+      ],
+      buttonColor: "from-yellow-400 to-yellow-500",
+      popular: true
+    }
+  ];
+
+  const handlePlanSelection = async (plan: any) => {
+    if (plan.amount === 0) {
+      // Handle free trial
+      try {
+        // You can make an API call here to activate free trial
+        const response = await fetch('/api/activate-trial', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: user?.id,
+            preferences: userPreferences
+          }),
+        });
+
+        if (response.ok) {
+          alert('Free trial activated successfully!');
+          router.push('/dashboard');
+        } else {
+          alert('Failed to activate free trial');
+        }
+      } catch (error) {
+        console.error('Error activating trial:', error);
+        alert('Something went wrong');
+      }
+      return;
+    }
+
+    // Handle paid plans with Razorpay
+    try {
+      const res = await fetch("/api/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: plan.amount, currency: "INR" }),
+      });
+
+      const data = await res.json();
+      if (!data.order) {
+        alert("Failed to create payment order");
+        return;
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: data.order.amount,
+        currency: data.order.currency,
+        name: "Ultralit",
+        description: `${plan.name} Subscription`,
+        order_id: data.order.id,
+        handler: async function (response: any) {
+          const verifyRes = await fetch("/api/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              user_id: user?.id,
+              plan_name: plan.name,
+              amount: plan.amount,
+              preferences: userPreferences,
+            }),
+          });
+
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            alert("Payment successful! Welcome to Ultralit!");
+            router.push('/dashboard');
+          } else {
+            alert("Payment verification failed");
+          }
+        },
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: user?.phone || "",
+        },
+        theme: { color: "#F59E0B" },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong");
+    }
+  };
+
+  const goBack = () => {
+    router.push('/preferences');
+  };
+
+  if (!userPreferences) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <p className="text-xl text-gray-600">Loading your preferences...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-12 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4">
+            Choose Your <span className="text-yellow-500">Plan</span>
+          </h1>
+          <p className="text-xl text-gray-600 mb-6">Select the perfect plan for your learning journey</p>
+          <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
+          
+          {/* Selected Preferences Summary */}
+          <div className="bg-white rounded-xl p-6 shadow-lg border border-yellow-300 max-w-2xl mx-auto">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Your Selected Preferences</h3>
+            <div className="flex flex-wrap justify-center gap-4 text-sm">
+              <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
+                📚 {userPreferences.contentType?.replace('-', ' ').toUpperCase()}
+              </span>
+              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                🌐 {userPreferences.language}
+              </span>
+              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                ⏰ {userPreferences.frequency}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Pricing Cards */}
+        <div className="grid md:grid-cols-3 gap-8">
+          {plans.map((plan, index) => (
+            <div
+              key={index}
+              className={`relative bg-white rounded-3xl p-8 border transition-all duration-500 hover:scale-105 ${
+                plan.popular
+                  ? "border-yellow-400 shadow-xl shadow-yellow-200 scale-105"
+                  : "border-yellow-200 shadow-lg"
+              }`}
+            >
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-gray-900 px-6 py-2 rounded-full text-sm font-bold shadow-lg">
+                  Most Popular
+                </div>
+              )}
+
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-6 flex items-center justify-center bg-yellow-100 rounded-2xl text-4xl">
+                  {plan.icon}
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">
+                  {plan.name}
+                </h3>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-yellow-500">
+                    {plan.price}
+                  </span>
+                  <span className="text-lg text-gray-600">{plan.period}</span>
+                </div>
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                  {plan.description}
+                </p>
+                
+                {/* Features */}
+                <div className="mb-8 text-left">
+                  <h4 className="font-semibold text-gray-800 mb-3 text-center">What's included:</h4>
+                  <ul className="space-y-2">
+                    {plan.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-center text-sm text-gray-600">
+                        <svg className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <button
+                  onClick={() => handlePlanSelection(plan)}
+                  className={`w-full bg-gradient-to-r ${plan.buttonColor} text-white py-4 rounded-full font-bold text-lg transition-all duration-300 hover:shadow-xl hover:scale-105 shadow-lg`}
+                >
+                  {plan.name === "Free Trial"
+                    ? "Start Free Trial"
+                    : "Choose Plan"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Navigation */}
+        <div className="flex justify-between items-center mt-12">
+          <button
+            onClick={goBack}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-full transition-all duration-300"
+          >
+            ← Back
+          </button>
+          
+          {/* Progress Indicator */}
+          <div className="flex items-center space-x-4">
+            <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+            <div className="w-8 h-1 bg-yellow-400"></div>
+            <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+            <span className="ml-4 text-sm text-gray-600">Step 3 of 3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PaymentPage;
