@@ -1,4 +1,3 @@
-//app/components/PaymentPage.tsx
 "use client"
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,6 +13,7 @@ const PaymentPage = () => {
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
   const [userPreferences, setUserPreferences] = useState<any>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     // Check if user is authenticated and has preferences
@@ -47,8 +47,8 @@ const PaymentPage = () => {
     },
     {
       name: "Students",
-      price: "₹200",
-      amount: 200,
+      price: "₹10",
+      amount: 10,
       period: "/month",
       description: "Perfect for learners and aspiring professionals",
       icon: "🎓",
@@ -63,8 +63,8 @@ const PaymentPage = () => {
     },
     {
       name: "Professionals & Executives",
-      price: "₹500",
-      amount: 500,
+      price: "₹10",
+      amount: 10,
       period: "/month",
       description: "For working professionals and business leaders",
       icon: "💼",
@@ -80,10 +80,13 @@ const PaymentPage = () => {
   ];
 
   const handlePlanSelection = async (plan: any) => {
-    if (plan.amount === 0) {
-      // Handle free trial
-      try {
-        // You can make an API call here to activate free trial
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+
+    try {
+      if (plan.amount === 0) {
+        // Handle free trial
         const response = await fetch('/api/activate-trial', {
           method: 'POST',
           headers: {
@@ -91,34 +94,45 @@ const PaymentPage = () => {
           },
           body: JSON.stringify({
             user_id: user?.id,
+            plan_name: plan.name,
             preferences: userPreferences
           }),
         });
 
-        if (response.ok) {
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
           alert('Free trial activated successfully!');
           router.push('/dashboard');
         } else {
-          alert('Failed to activate free trial');
+          console.error('Failed to activate free trial:', data);
+          alert(data.error || 'Failed to activate free trial');
         }
-      } catch (error) {
-        console.error('Error activating trial:', error);
-        alert('Something went wrong');
+        return;
       }
-      return;
-    }
 
-    // Handle paid plans with Razorpay
-    try {
+      // Handle paid plans with Razorpay
+      console.log('Creating order for plan:', plan.name, 'Amount:', plan.amount);
+      
       const res = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: plan.amount, currency: "INR" }),
+        body: JSON.stringify({ 
+          amount: plan.amount, 
+          currency: "INR",
+          notes: {
+            plan_name: plan.name,
+            user_id: user?.id
+          }
+        }),
       });
 
       const data = await res.json();
+      console.log('Order creation response:', data);
+      
       if (!data.order) {
-        alert("Failed to create payment order");
+        console.error('Order creation failed:', data);
+        alert(data.error || "Failed to create payment order");
         return;
       }
 
@@ -130,26 +144,42 @@ const PaymentPage = () => {
         description: `${plan.name} Subscription`,
         order_id: data.order.id,
         handler: async function (response: any) {
-          const verifyRes = await fetch("/api/verify-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_signature: response.razorpay_signature,
-              user_id: user?.id,
-              plan_name: plan.name,
-              amount: plan.amount,
-              preferences: userPreferences,
-            }),
-          });
+          console.log('Razorpay payment response:', response);
+          
+          try {
+            const verifyRes = await fetch("/api/verify-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                user_id: user?.id,
+                plan_name: plan.name,
+                amount: plan.amount,
+                preferences: userPreferences,
+              }),
+            });
 
-          const verifyData = await verifyRes.json();
-          if (verifyData.success) {
-            alert("Payment successful! Welcome to Ultralit!");
-            router.push('/dashboard');
-          } else {
-            alert("Payment verification failed");
+            const verifyData = await verifyRes.json();
+            console.log('Payment verification response:', verifyData);
+            
+            if (verifyRes.ok && verifyData.success) {
+              alert("Payment successful! Welcome to Ultralit!");
+              router.push('/dashboard');
+            } else {
+              console.error('Payment verification failed:', verifyData);
+              alert(verifyData.error || "Payment verification failed. Please contact support.");
+            }
+          } catch (verifyError) {
+            console.error('Payment verification error:', verifyError);
+            alert("Payment verification failed. Please contact support.");
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            console.log('Payment modal dismissed');
+            setIsProcessing(false);
           }
         },
         prefill: {
@@ -161,10 +191,23 @@ const PaymentPage = () => {
       };
 
       const razorpay = new window.Razorpay(options);
+      
+      razorpay.on('payment.failed', function (response: any) {
+        console.error('Payment failed:', response.error);
+        alert(`Payment failed: ${response.error.description}`);
+        setIsProcessing(false);
+      });
+
       razorpay.open();
+      
     } catch (error) {
-      console.error(error);
-      alert("Something went wrong");
+      console.error('Payment process error:', error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      if (plan.amount === 0) {
+        setIsProcessing(false);
+      }
+      // For paid plans, setIsProcessing(false) is called in modal.ondismiss or after success
     }
   };
 
@@ -262,11 +305,17 @@ const PaymentPage = () => {
 
                 <button
                   onClick={() => handlePlanSelection(plan)}
-                  className={`w-full bg-gradient-to-r ${plan.buttonColor} text-white py-4 rounded-full font-bold text-lg transition-all duration-300 hover:shadow-xl hover:scale-105 shadow-lg`}
+                  disabled={isProcessing}
+                  className={`w-full bg-gradient-to-r ${plan.buttonColor} text-white py-4 rounded-full font-bold text-lg transition-all duration-300 hover:shadow-xl hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
                 >
-                  {plan.name === "Free Trial"
-                    ? "Start Free Trial"
-                    : "Choose Plan"}
+                  {isProcessing ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    plan.name === "Free Trial" ? "Start Free Trial" : "Choose Plan"
+                  )}
                 </button>
               </div>
             </div>
@@ -277,7 +326,8 @@ const PaymentPage = () => {
         <div className="flex justify-between items-center mt-12">
           <button
             onClick={goBack}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-full transition-all duration-300"
+            disabled={isProcessing}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ← Back
           </button>

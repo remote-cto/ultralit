@@ -18,8 +18,8 @@ const PricingSection = () => {
   const plans = [
     {
       name: "Students",
-      price: "₹200",
-      amount: 200,
+      price: "₹10",
+      amount: 10,
       period: "/month",
       description: "Perfect for learners and aspiring professionals",
       icon: "🎓",
@@ -28,8 +28,8 @@ const PricingSection = () => {
     },
     {
       name: "Professionals & Executives",
-      price: "₹500",
-      amount: 500,
+      price: "₹10",
+      amount: 10,
       period: "/month",
       description: "For working professionals and business leaders",
       icon: "💼",
