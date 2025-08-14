@@ -14,19 +14,51 @@ const PaymentPage = () => {
   const router = useRouter();
   const [userPreferences, setUserPreferences] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated and has preferences
+    // Check if user is authenticated
     if (!isAuthenticated) {
       router.push('/auth');
       return;
     }
 
+    // Load preferences
     const savedPreferences = localStorage.getItem('userPreferences');
     if (savedPreferences) {
       setUserPreferences(JSON.parse(savedPreferences));
     }
-  }, [isAuthenticated, router]);
+
+    // Check subscription status
+    checkSubscriptionStatus();
+  }, [isAuthenticated, router, user]);
+
+  const checkSubscriptionStatus = async () => {
+    if (!user?.id) return;
+
+    try {
+      setIsCheckingSubscription(true);
+      const response = await fetch(`/api/check-subscription?user_id=${user.id}`);
+      const data = await response.json();
+      
+      console.log('Subscription check response:', data);
+      
+      if (response.ok && data.subscription) {
+        // User has an active subscription
+        if (data.subscription.status === 'active') {
+          console.log('User has active subscription, redirecting to dashboard');
+          router.push('/dashboard');
+          return;
+        }
+        setSubscriptionStatus(data.subscription);
+      }
+    } catch (error) {
+      console.error('Error checking subscription status:', error);
+    } finally {
+      setIsCheckingSubscription(false);
+    }
+  };
 
   const plans = [
     {
@@ -207,7 +239,6 @@ const PaymentPage = () => {
       if (plan.amount === 0) {
         setIsProcessing(false);
       }
-      // For paid plans, setIsProcessing(false) is called in modal.ondismiss or after success
     }
   };
 
@@ -215,6 +246,19 @@ const PaymentPage = () => {
     router.push('/preferences');
   };
 
+  // Show loading while checking subscription
+  if (isCheckingSubscription) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <p className="text-xl text-gray-600">Checking your subscription status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while preferences are loading
   if (!userPreferences) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
@@ -236,6 +280,16 @@ const PaymentPage = () => {
           </h1>
           <p className="text-xl text-gray-600 mb-6">Select the perfect plan for your learning journey</p>
           <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
+          
+          {/* Show current subscription status if exists */}
+          {subscriptionStatus && (
+            <div className="bg-orange-100 border border-orange-300 rounded-xl p-4 mb-6 max-w-2xl mx-auto">
+              <p className="text-orange-800">
+                You have a <strong>{subscriptionStatus.status}</strong> subscription for <strong>{subscriptionStatus.plan_name}</strong>.
+                {subscriptionStatus.status === 'expired' && ' Please choose a new plan to continue.'}
+              </p>
+            </div>
+          )}
           
           {/* Selected Preferences Summary */}
           <div className="bg-white rounded-xl p-6 shadow-lg border border-yellow-300 max-w-2xl mx-auto">
