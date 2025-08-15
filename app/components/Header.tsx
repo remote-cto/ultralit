@@ -5,11 +5,17 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
 
+interface UserStatus {
+  hasPreferences: boolean;
+  hasSubscription: boolean;
+}
+
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
-  const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
+  const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
@@ -18,7 +24,7 @@ const Header = () => {
   const handleLogout = () => {
     logout();
     setShowUserMenu(false);
-    setSubscriptionStatus(null);
+    setUserStatus(null);
     router.push("/");
   };
 
@@ -30,27 +36,30 @@ const Header = () => {
     }
   };
 
-  const checkUserSubscription = async () => {
-    if (!user?.id || isCheckingSubscription) return null;
+  const checkUserStatus = async () => {
+    if (!user?.id || isCheckingStatus) return null;
 
     try {
-      setIsCheckingSubscription(true);
-      const response = await fetch(`/api/check-subscription?user_id=${user.id}`);
-      const data = await response.json();
+      setIsCheckingStatus(true);
+      const res = await fetch(`/api/check-user-status?user_id=${user.id}`);
+      const data = await res.json();
 
-      if (response.ok && data.subscription) {
-        setSubscriptionStatus(data.subscription);
-        return data.subscription;
+      if (res.ok && data.success) {
+        setUserStatus({
+          hasPreferences: data.hasPreferences,
+          hasSubscription: data.hasSubscription,
+        });
+        return data;
       } else {
-        setSubscriptionStatus(null);
+        setUserStatus(null);
         return null;
       }
     } catch (error) {
-      console.error("Error checking subscription:", error);
-      setSubscriptionStatus(null);
+      console.error("Error checking user status:", error);
+      setUserStatus(null);
       return null;
     } finally {
-      setIsCheckingSubscription(false);
+      setIsCheckingStatus(false);
     }
   };
 
@@ -60,28 +69,22 @@ const Header = () => {
       return;
     }
 
-    const sub = subscriptionStatus || (await checkUserSubscription());
-    const hasPreferences = !!localStorage.getItem("userPreferences");
+    const status = userStatus || (await checkUserStatus());
 
-    // Returning user with active sub → Dashboard
-    if (sub?.is_active) {
+    if (!status) return;
+
+    if (status.hasSubscription) {
       router.push("/dashboard");
-      return;
-    }
-
-    // First-time or incomplete setup:
-    if (!hasPreferences) {
+    } else if (!status.hasPreferences) {
       router.push("/preferences");
-      return;
+    } else {
+      router.push("/payment");
     }
-
-    // Has preferences but no active sub → Payment
-    router.push("/payment");
   };
 
   useEffect(() => {
-    if (isAuthenticated && user?.id && !subscriptionStatus) {
-      checkUserSubscription();
+    if (isAuthenticated && user?.id && !userStatus) {
+      checkUserStatus();
     }
   }, [isAuthenticated, user?.id]);
 
@@ -91,7 +94,10 @@ const Header = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
         setShowUserMenu(false);
       }
     };
@@ -99,7 +105,6 @@ const Header = () => {
     if (showUserMenu) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -109,8 +114,8 @@ const Header = () => {
 
   const getButtonText = () => {
     if (!isAuthenticated) return "Get Started";
-    if (subscriptionStatus?.is_active) return "Dashboard";
-    if (localStorage.getItem("userPreferences")) return "Choose Plan";
+    if (userStatus?.hasSubscription) return "Dashboard";
+    if (userStatus?.hasPreferences) return "Choose Plan";
     return "Continue";
   };
 
@@ -130,13 +135,6 @@ const Header = () => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
-            <a
-              href="#pricing"
-              className="text-gray-700 hover:text-yellow-500 transition-colors font-medium"
-            >
-              Pricing
-            </a>
-
             {isAuthenticated ? (
               <div className="relative" ref={userMenuRef}>
                 <button
@@ -145,9 +143,9 @@ const Header = () => {
                 >
                   <User className="w-4 h-4" />
                   <span>{user?.name || "User"}</span>
-                  {subscriptionStatus?.is_active && (
+                  {userStatus?.hasSubscription && (
                     <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      {subscriptionStatus.plan_name}
+                      Active Plan
                     </span>
                   )}
                 </button>
@@ -157,16 +155,16 @@ const Header = () => {
                     <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-200">
                       <div className="font-medium">{user?.name || "User"}</div>
                       <div className="text-gray-500">{user?.email}</div>
-                      {subscriptionStatus && (
+                      {userStatus?.hasSubscription ? (
                         <div className="mt-1 text-xs">
-                          <span
-                            className={`px-2 py-1 rounded-full ${
-                              subscriptionStatus.is_active
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {subscriptionStatus.plan_name} - {subscriptionStatus.status}
+                          <span className="px-2 py-1 rounded-full bg-green-100 text-green-800">
+                            Active Subscription
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-1 text-xs">
+                          <span className="px-2 py-1 rounded-full bg-red-100 text-red-800">
+                            No Subscription
                           </span>
                         </div>
                       )}
@@ -192,10 +190,10 @@ const Header = () => {
 
             <button
               onClick={handleGetStartedClick}
-              disabled={isCheckingSubscription}
+              disabled={isCheckingStatus}
               className="bg-yellow-400 hover:bg-yellow-500 text-white px-8 py-3 rounded-full font-bold transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50"
             >
-              {isCheckingSubscription ? (
+              {isCheckingStatus ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Loading...
@@ -211,7 +209,11 @@ const Header = () => {
             className="md:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-700"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
           </button>
         </div>
 
@@ -234,16 +236,16 @@ const Header = () => {
                     <div>
                       <div className="font-medium">{user?.name || "User"}</div>
                       <div className="text-sm text-gray-500">{user?.email}</div>
-                      {subscriptionStatus && (
+                      {userStatus?.hasSubscription ? (
                         <div className="mt-1">
-                          <span
-                            className={`px-2 py-1 text-xs rounded-full ${
-                              subscriptionStatus.is_active
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {subscriptionStatus.plan_name} - {subscriptionStatus.status}
+                          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                            Active Subscription
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-1">
+                          <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
+                            No Subscription
                           </span>
                         </div>
                       )}
@@ -277,10 +279,10 @@ const Header = () => {
                   handleGetStartedClick();
                   setIsMobileMenuOpen(false);
                 }}
-                disabled={isCheckingSubscription}
+                disabled={isCheckingStatus}
                 className="w-full bg-yellow-400 hover:bg-yellow-500 text-white px-6 py-3 rounded-full font-bold mt-4 shadow-md disabled:opacity-50"
               >
-                {isCheckingSubscription ? (
+                {isCheckingStatus ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Loading...
