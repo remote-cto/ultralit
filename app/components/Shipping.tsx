@@ -38,24 +38,15 @@ const ShippingModal: React.FC<ShippingModalProps> = ({ isOpen, onClose }) => {
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
               1. Digital Delivery
             </h3>
-            <ul className="space-y-2 text-gray-700">
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                Upon successful booking and payment of a course, you will
-                receive immediate access to the course details via email.
-              </li>
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                Course materials (if applicable) will be provided through email
-                or WhatsApp or any other messaging system in your user dashboard
-                on our platform.
-              </li>
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                No physical items will be shipped as all courses and content are
-                delivered digitally.
-              </li>
-            </ul>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              Upon successful booking and payment of a course, you will receive immediate access to the course details via email.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              Course materials (if applicable) will be provided through email or WhatsApp or any other messaging system in your user dashboard on our platform.
+            </p>
+            <p className="text-gray-700 leading-relaxed">
+              No physical items will be shipped as all courses and content are delivered digitally.
+            </p>
           </div>
 
           {/* 2. Access to Live Sessions */}
@@ -63,19 +54,12 @@ const ShippingModal: React.FC<ShippingModalProps> = ({ isOpen, onClose }) => {
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
               2. Access to Live Sessions
             </h3>
-            <ul className="space-y-2 text-gray-700">
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                Once the course is booked, you will receive a confirmation email
-                with the schedule and link to join the live sessions.
-              </li>
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                Ensure you provide a valid email address during the checkout
-                process to avoid delays in receiving the course access
-                information.
-              </li>
-            </ul>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              Once the course is booked, you will receive a confirmation email with the schedule and link to join the live sessions.
+            </p>
+            <p className="text-gray-700 leading-relaxed">
+              Ensure you provide a valid email address during the checkout process to avoid delays in receiving the course access information.
+            </p>
           </div>
 
           {/* 3. Technical Requirements */}
@@ -83,14 +67,9 @@ const ShippingModal: React.FC<ShippingModalProps> = ({ isOpen, onClose }) => {
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
               3. Technical Requirements
             </h3>
-            <ul className="space-y-2 text-gray-700">
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                Our courses are conducted online via platforms like Zoom or
-                similar. Please ensure you have a stable internet connection and
-                necessary software to attend the live sessions.
-              </li>
-            </ul>
+            <p className="text-gray-700 leading-relaxed">
+              Our courses are conducted online via platforms like Zoom or similar. Please ensure you have a stable internet connection and necessary software to attend the live sessions.
+            </p>
           </div>
 
           {/* 4. Non-Delivery */}
@@ -98,21 +77,16 @@ const ShippingModal: React.FC<ShippingModalProps> = ({ isOpen, onClose }) => {
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
               4. Non-Delivery
             </h3>
-            <ul className="space-y-2 text-gray-700">
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                In the unlikely event that you do not receive your course access
-                email within 24 hours of payment, please contact our support
-                team at{" "}
-                <a
-                  href="mailto:connect@xworks.live"
-                  className="text-yellow-600 hover:text-yellow-700 underline"
-                >
-                  connect@xworks.live
-                </a>{" "}
-                for assistance.
-              </li>
-            </ul>
+            <p className="text-gray-700 leading-relaxed">
+              In the unlikely event that you do not receive your course access email within 24 hours of payment, please contact our support team at{" "}
+              <a
+                href="mailto:connect@xworks.live"
+                className="text-blue-600 hover:text-blue-700 underline"
+              >
+                connect@xworks.live
+              </a>{" "}
+              for assistance.
+            </p>
           </div>
 
           {/* 5. Rescheduling and Cancellations */}
@@ -120,19 +94,13 @@ const ShippingModal: React.FC<ShippingModalProps> = ({ isOpen, onClose }) => {
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
               5. Rescheduling and Cancellations
             </h3>
-            <ul className="space-y-2 text-gray-700">
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                If the live course you've enrolled in needs to be rescheduled,
-                you will be notified via email and provided with the new dates
-                or times.
-              </li>
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                For cancellations or refunds, please refer to our{" "}
-                <span className="font-semibold">Refund Policy</span>.
-              </li>
-            </ul>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              If the live course you've enrolled in needs to be rescheduled, you will be notified via email and provided with the new dates or times.
+            </p>
+            <p className="text-gray-700 leading-relaxed">
+              For cancellations or refunds, please refer to our{" "}
+              <span className="font-semibold">Refund Policy</span>.
+            </p>
           </div>
 
           {/* 6. Customer Support */}
@@ -140,27 +108,23 @@ const ShippingModal: React.FC<ShippingModalProps> = ({ isOpen, onClose }) => {
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
               6. Customer Support
             </h3>
-            <ul className="space-y-2 text-gray-700">
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                For any issues or queries related to your course access, feel
-                free to contact our support team at{" "}
-                <a
-                  href="mailto:connect@xworks.live"
-                  className="text-yellow-600 hover:text-yellow-700 underline"
-                >
-                  connect@xworks.live
-                </a>{" "}
-                or call us at{" "}
-                <a
-                  href="tel:+917383808881"
-                  className="text-yellow-600 hover:text-yellow-700 underline"
-                >
-                  +91 73838-08881
-                </a>
-                .
-              </li>
-            </ul>
+            <p className="text-gray-700 leading-relaxed">
+              For any issues or queries related to your course access, feel free to contact our support team at{" "}
+              <a
+                href="mailto:connect@xworks.live"
+                className="text-blue-600 hover:text-blue-700 underline"
+              >
+                connect@xworks.live
+              </a>{" "}
+              or call us at{" "}
+              <a
+                href="tel:+917383808881"
+                className="text-blue-600 hover:text-blue-700 underline"
+              >
+                +91 73838-08881
+              </a>
+              .
+            </p>
           </div>
         </div>
 
