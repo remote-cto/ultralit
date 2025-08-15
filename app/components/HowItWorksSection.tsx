@@ -4,19 +4,26 @@ const HowItWorksSection = () => {
   const steps = [
     {
       number: 1,
-      title: "Sign Up Instantly",
-      description: "Begin your 7-day premium trial with zero commitment",
-      icon: "✨",
-    },
-    {
-      number: 2,
       title: "Define Your Profile",
       description:
         "Student, Professional, Executive, Specialist — we adapt to you",
       icon: "🎯",
     },
     {
+      number: 2,
+      title: "Select Your Topic of Interest",
+      description:
+        "From AI to Climate Tech, Fintech to Cybersecurity — choose the topics that matter to you most. We’ll tailor every update to your curiosity and goals.",
+      icon: "📚",
+    },
+    {
       number: 3,
+      title: "Sign Up Instantly",
+      description: "Begin your 7-day premium trial with zero commitment",
+      icon: "✨",
+    },
+    {
+      number: 4,
       title: "Receive Personalized Intelligence",
       description:
         "Daily or weekly insights crafted for your success and tailored to your growth goals across multiple aspects of your career or studies.",
@@ -40,7 +47,7 @@ const HowItWorksSection = () => {
         </FadeInUp>
 
         {/* Ensure equal height */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto items-stretch">
+        <div className="grid md:grid-cols-4 gap-8 max-w-8xl mx-auto items-stretch">
           {steps.map((step, index) => (
             <FadeInUp key={step.number} delay={200 + index * 200}>
               <div className="group text-center p-8 bg-yellow-50 rounded-3xl border border-yellow-200 hover:border-yellow-400 transition-all duration-500 hover:scale-105 shadow-lg h-full flex flex-col">
