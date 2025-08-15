@@ -74,7 +74,7 @@ const Header = () => {
         router.push("/preferences");
       }
     } else {
-      router.push("/auth");
+      router.push("/");
     }
   };
 

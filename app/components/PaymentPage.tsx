@@ -20,7 +20,7 @@ const PaymentPage = () => {
   useEffect(() => {
     // Check if user is authenticated
     if (!isAuthenticated) {
-      router.push('/auth');
+      router.push('/');
       return;
     }
 
