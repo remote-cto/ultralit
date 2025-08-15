@@ -93,7 +93,6 @@ const AuthForm = () => {
       if (response.ok) {
         setMessage("Login successful! Redirecting...");
 
-        // Get user data from the response
         const userData = {
           id: data.user?.id,
           name: data.user?.name || "User",
@@ -105,7 +104,22 @@ const AuthForm = () => {
         };
         login(userData);
 
-        // Reset form and OTP state
+        // ✅ Check preferences + subscription
+        const statusRes = await fetch(
+          `/api/check-user-status?user_id=${data.user?.id}`
+        );
+        const statusData = await statusRes.json();
+
+        let redirectPath = "/preferences";
+        if (
+          statusData.success &&
+          statusData.hasPreferences &&
+          statusData.hasSubscription
+        ) {
+          redirectPath = "/dashboard";
+        }
+
+        // Reset form
         setFormData({
           name: "",
           email: "",
@@ -117,9 +131,8 @@ const AuthForm = () => {
         setOtp("");
         setShowOtpField(false);
 
-        // Always redirect to preferences page after successful login
         setTimeout(() => {
-          router.push("/preferences");
+          router.push(redirectPath);
         }, 1500);
       } else {
         setMessage(data.error || "Invalid OTP. Please try again.");
@@ -207,7 +220,9 @@ const AuthForm = () => {
             {isRegister ? "Create Account" : "Welcome Back"}
           </h2>
           <p className="text-gray-600 mt-2">
-            {isRegister ? "Join the AI learning community" : "Sign in to continue your learning"}
+            {isRegister
+              ? "Join the AI learning community"
+              : "Sign in to continue your learning"}
           </p>
         </div>
 
@@ -215,7 +230,9 @@ const AuthForm = () => {
         {message && (
           <div
             className={`mb-4 p-3 rounded-lg text-center text-sm ${
-              message.includes("successful") || message.includes("sent") || message.includes("Redirecting")
+              message.includes("successful") ||
+              message.includes("sent") ||
+              message.includes("Redirecting")
                 ? "bg-green-100 text-green-700 border border-green-300"
                 : "bg-red-100 text-red-700 border border-red-300"
             }`}

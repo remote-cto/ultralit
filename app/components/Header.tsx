@@ -1,4 +1,3 @@
-// app/components/Header.tsx
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { Menu, X, Sparkles, User, LogOut } from "lucide-react";
@@ -27,70 +26,69 @@ const Header = () => {
     if (isAuthenticated) {
       setShowUserMenu(!showUserMenu);
     } else {
-      router.push("/auth"); 
+      router.push("/auth");
     }
   };
 
   const checkUserSubscription = async () => {
-    if (!user?.id || isCheckingSubscription) return;
+    if (!user?.id || isCheckingSubscription) return null;
 
     try {
       setIsCheckingSubscription(true);
       const response = await fetch(`/api/check-subscription?user_id=${user.id}`);
       const data = await response.json();
-      
+
       if (response.ok && data.subscription) {
         setSubscriptionStatus(data.subscription);
+        return data.subscription;
       } else {
         setSubscriptionStatus(null);
+        return null;
       }
     } catch (error) {
-      console.error('Error checking subscription:', error);
+      console.error("Error checking subscription:", error);
       setSubscriptionStatus(null);
+      return null;
     } finally {
       setIsCheckingSubscription(false);
     }
   };
 
   const handleGetStartedClick = async () => {
-    if (isAuthenticated) {
-      // First check subscription status if we don't have it
-      if (!subscriptionStatus && user?.id) {
-        await checkUserSubscription();
-      }
-
-      const hasPreferences = localStorage.getItem('userPreferences');
-      
-      // If user has an active subscription, go to dashboard
-      if (subscriptionStatus?.is_active) {
-        router.push("/dashboard");
-      }
-      // If user has preferences but no active subscription, go to payment
-      else if (hasPreferences) {
-        router.push("/payment");
-      }
-      // If no preferences, start from preferences
-      else {
-        router.push("/preferences");
-      }
-    } else {
-      router.push("/");
+    if (!isAuthenticated) {
+      router.push("/auth");
+      return;
     }
+
+    const sub = subscriptionStatus || (await checkUserSubscription());
+    const hasPreferences = !!localStorage.getItem("userPreferences");
+
+    // Returning user with active sub → Dashboard
+    if (sub?.is_active) {
+      router.push("/dashboard");
+      return;
+    }
+
+    // First-time or incomplete setup:
+    if (!hasPreferences) {
+      router.push("/preferences");
+      return;
+    }
+
+    // Has preferences but no active sub → Payment
+    router.push("/payment");
   };
 
-  // Check subscription when user changes or component mounts
   useEffect(() => {
     if (isAuthenticated && user?.id && !subscriptionStatus) {
       checkUserSubscription();
     }
   }, [isAuthenticated, user?.id]);
 
-  // Close mobile menu when pathname changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  // Close user menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
@@ -99,23 +97,20 @@ const Header = () => {
     };
 
     if (showUserMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showUserMenu]);
 
-  // Don't render header on auth page to avoid duplication
-  if (pathname === "/auth") {
-    return null;
-  }
+  if (pathname === "/auth") return null;
 
   const getButtonText = () => {
     if (!isAuthenticated) return "Get Started";
     if (subscriptionStatus?.is_active) return "Dashboard";
-    if (localStorage.getItem('userPreferences')) return "Choose Plan";
+    if (localStorage.getItem("userPreferences")) return "Choose Plan";
     return "Continue";
   };
 
@@ -142,7 +137,6 @@ const Header = () => {
               Pricing
             </a>
 
-            {/* Authentication Section */}
             {isAuthenticated ? (
               <div className="relative" ref={userMenuRef}>
                 <button
@@ -158,7 +152,6 @@ const Header = () => {
                   )}
                 </button>
 
-                {/* User Dropdown Menu */}
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-68 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                     <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-200">
@@ -166,11 +159,13 @@ const Header = () => {
                       <div className="text-gray-500">{user?.email}</div>
                       {subscriptionStatus && (
                         <div className="mt-1 text-xs">
-                          <span className={`px-2 py-1 rounded-full ${
-                            subscriptionStatus.is_active 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 rounded-full ${
+                              subscriptionStatus.is_active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
                             {subscriptionStatus.plan_name} - {subscriptionStatus.status}
                           </span>
                         </div>
@@ -195,7 +190,7 @@ const Header = () => {
               </button>
             )}
 
-            <button 
+            <button
               onClick={handleGetStartedClick}
               disabled={isCheckingSubscription}
               className="bg-yellow-400 hover:bg-yellow-500 text-white px-8 py-3 rounded-full font-bold transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50"
@@ -216,11 +211,7 @@ const Header = () => {
             className="md:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-700"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
 
@@ -236,23 +227,22 @@ const Header = () => {
                 Pricing
               </a>
 
-              {/* Mobile Authentication Section */}
               {isAuthenticated ? (
                 <div className="border-t border-gray-200 pt-4">
                   <div className="flex items-center space-x-2 py-2 text-gray-700">
                     <User className="w-4 h-4" />
                     <div>
                       <div className="font-medium">{user?.name || "User"}</div>
-                      <div className="text-sm text-gray-500">
-                        {user?.email}
-                      </div>
+                      <div className="text-sm text-gray-500">{user?.email}</div>
                       {subscriptionStatus && (
                         <div className="mt-1">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            subscriptionStatus.is_active 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              subscriptionStatus.is_active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
                             {subscriptionStatus.plan_name} - {subscriptionStatus.status}
                           </span>
                         </div>
@@ -282,7 +272,7 @@ const Header = () => {
                 </button>
               )}
 
-              <button 
+              <button
                 onClick={() => {
                   handleGetStartedClick();
                   setIsMobileMenuOpen(false);

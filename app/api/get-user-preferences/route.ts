@@ -1,3 +1,5 @@
+//app/api/get-user-preferences
+
 import { NextRequest, NextResponse } from "next/server";
 import pool from "../../../utils/database";
 
