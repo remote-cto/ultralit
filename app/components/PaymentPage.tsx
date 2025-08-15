@@ -16,6 +16,7 @@ const PaymentPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
 
   useEffect(() => {
     // Check if user is authenticated
@@ -24,39 +25,61 @@ const PaymentPage = () => {
       return;
     }
 
-    // Load preferences
-    const savedPreferences = localStorage.getItem('userPreferences');
-    if (savedPreferences) {
-      setUserPreferences(JSON.parse(savedPreferences));
-    }
-
-    // Check subscription status
-    checkSubscriptionStatus();
+    // Load preferences and check subscription
+    loadUserData();
   }, [isAuthenticated, router, user]);
 
-  const checkSubscriptionStatus = async () => {
+  const loadUserData = async () => {
     if (!user?.id) return;
 
     try {
-      setIsCheckingSubscription(true);
-      const response = await fetch(`/api/check-subscription?user_id=${user.id}`);
-      const data = await response.json();
-      
-      console.log('Subscription check response:', data);
-      
-      if (response.ok && data.subscription) {
-        // User has an active subscription
-        if (data.subscription.status === 'active') {
-          console.log('User has active subscription, redirecting to dashboard');
-          router.push('/dashboard');
+      // Check subscription status and load preferences simultaneously
+      const [subscriptionRes, preferencesRes] = await Promise.all([
+        fetch(`/api/check-subscription?user_id=${user.id}`),
+        fetch(`/api/get-user-preferences?user_id=${user.id}`)
+      ]);
+
+      // Handle subscription check
+      if (subscriptionRes.ok) {
+        const subscriptionData = await subscriptionRes.json();
+        console.log('Subscription check response:', subscriptionData);
+        
+        if (subscriptionData.subscription) {
+          if (subscriptionData.subscription.status === 'active') {
+            console.log('User has active subscription, redirecting to dashboard');
+            router.push('/dashboard');
+            return;
+          }
+          setSubscriptionStatus(subscriptionData.subscription);
+        }
+      }
+
+      // Handle preferences
+      if (preferencesRes.ok) {
+        const preferencesData = await preferencesRes.json();
+        if (preferencesData.success && preferencesData.preferences) {
+          setUserPreferences(preferencesData.preferences);
+        } else {
+          // If no preferences found, redirect back to preferences page
+          console.log('No preferences found, redirecting to preferences page');
+          router.push('/preferences');
           return;
         }
-        setSubscriptionStatus(data.subscription);
+      } else {
+        // If preferences API fails, redirect back to preferences page
+        console.log('Failed to load preferences, redirecting to preferences page');
+        router.push('/preferences');
+        return;
       }
+
     } catch (error) {
-      console.error('Error checking subscription status:', error);
+      console.error('Error loading user data:', error);
+      // On error, redirect back to preferences page
+      router.push('/preferences');
+      return;
     } finally {
       setIsCheckingSubscription(false);
+      setIsLoadingPreferences(false);
     }
   };
 
@@ -246,25 +269,15 @@ const PaymentPage = () => {
     router.push('/preferences');
   };
 
-  // Show loading while checking subscription
-  if (isCheckingSubscription) {
+  // Show loading while checking subscription or loading preferences
+  if (isCheckingSubscription || isLoadingPreferences) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <p className="text-xl text-gray-600">Checking your subscription status...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading while preferences are loading
-  if (!userPreferences) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <p className="text-xl text-gray-600">Loading your preferences...</p>
+          <p className="text-xl text-gray-600">
+            {isCheckingSubscription ? "Checking your subscription status..." : "Loading..."}
+          </p>
         </div>
       </div>
     );
@@ -292,20 +305,38 @@ const PaymentPage = () => {
           )}
           
           {/* Selected Preferences Summary */}
-          <div className="bg-white rounded-xl p-6 shadow-lg border border-yellow-300 max-w-2xl mx-auto">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Your Selected Preferences</h3>
-            <div className="flex flex-wrap justify-center gap-4 text-sm">
-              <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
-                📚 {userPreferences.contentType?.replace('-', ' ').toUpperCase()}
-              </span>
-              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                🌐 {userPreferences.language}
-              </span>
-              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                ⏰ {userPreferences.frequency}
-              </span>
+          {userPreferences && (
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-yellow-300 max-w-2xl mx-auto">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Your Selected Preferences</h3>
+              <div className="flex flex-wrap justify-center gap-4 text-sm">
+                {userPreferences.role && (
+                  <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full">
+                    👤 {userPreferences.role}
+                  </span>
+                )}
+                {userPreferences.industry && (
+                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                    🏭 {userPreferences.industry}
+                  </span>
+                )}
+                {userPreferences.language && (
+                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                    🌐 {userPreferences.language}
+                  </span>
+                )}
+                {userPreferences.preferred_mode && (
+                  <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
+                    📱 {userPreferences.preferred_mode}
+                  </span>
+                )}
+                {userPreferences.frequency && (
+                  <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full">
+                    ⏰ {userPreferences.frequency}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Pricing Cards */}

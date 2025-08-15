@@ -117,18 +117,9 @@ const AuthForm = () => {
         setOtp("");
         setShowOtpField(false);
 
-        // Check if user has completed onboarding (preferences)
-        const hasPreferences = localStorage.getItem('userPreferences');
-        
-        // Redirect to preferences page for new users, or home for returning users
+        // Always redirect to preferences page after successful login
         setTimeout(() => {
-          if (hasPreferences && data.user?.hasActiveSubscription) {
-            router.push("/dashboard");
-          } else if (hasPreferences) {
-            router.push("/payment");
-          } else {
-            router.push("/preferences");
-          }
+          router.push("/preferences");
         }, 1500);
       } else {
         setMessage(data.error || "Invalid OTP. Please try again.");
