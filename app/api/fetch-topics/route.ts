@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const result = await client.query(
       `SELECT id, name, description, topic_type 
-       FROM topic 
+       FROM topics 
        WHERE is_active = TRUE 
        ORDER BY name ASC`
     );
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const insertQuery = `
-      INSERT INTO topic (name, description, topic_type, is_active, created_at, updated_at)
+      INSERT INTO topics (name, description, topic_type, is_active, created_at, updated_at)
       VALUES ($1, $2, $3, $4, NOW(), NOW())
       RETURNING id, name, description, topic_type, is_active
     `;

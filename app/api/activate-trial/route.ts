@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     // Check if user already has an active subscription
     const existingSubscription = await client.query(
-      "SELECT id, plan_name, status, start_date FROM user_subscriptions WHERE user_id = $1 AND status = 'active'",
+      "SELECT id, plan_name, status, start_date FROM subscriptions WHERE user_id = $1 AND status = 'active' AND is_active = true",
       [user_id]
     );
 
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
     // Check if user has already used a free trial
     const previousTrial = await client.query(
-      "SELECT id FROM user_subscriptions WHERE user_id = $1 AND plan_name = 'Free Trial'",
+      "SELECT id FROM subscriptions WHERE user_id = $1 AND plan_name = 'Free Trial'",
       [user_id]
     );
 
@@ -84,43 +84,35 @@ export async function POST(req: NextRequest) {
 
     // Insert trial record (acts as payment record for consistency)
     const trialInsert = `
-      INSERT INTO user_payments (
-        user_id, payment_id, order_id, amount, currency,
-        status, paid_at, method, plan_name, details
+      INSERT INTO payments (
+        user_id, razorpay_payment_id, razorpay_order_id, amount, currency,
+        status, payment_method, created_at
       )
-      VALUES ($1, $2, $3, $4, $5, 'success', NOW(), 'free_trial', $6, $7)
+      VALUES ($1, $2, $3, $4, $5, 'completed', $6, NOW())
       RETURNING id
     `;
 
-    const trialDetails = {
-      trial_id: trialId,
-      preferences,
-      activated_at: new Date().toISOString(),
-      trial_duration_days: 7,
-    };
-
-    console.log("Inserting trial record...");
+    console.log("Inserting trial payment record...");
     const trialResult = await client.query(trialInsert, [
       user_id,
-      trialId, // payment_id
-      trialId, // order_id (same as payment_id for trials)
+      trialId, // razorpay_payment_id
+      trialId, // razorpay_order_id (same as payment_id for trials)
       0, // amount (free)
       "INR", // currency
-      plan_name,
-      JSON.stringify(trialDetails),
+      "free_trial", // payment_method
     ]);
 
-    console.log("Trial record inserted with ID:", trialResult.rows[0].id);
+    console.log("Trial payment record inserted with ID:", trialResult.rows[0].id);
 
     // Create user subscription for free trial
     const subscriptionInsert = `
-      INSERT INTO user_subscriptions (
-        user_id, plan_name, status, start_date, next_renewal_date,
-        amount, currency, payment_id, preferences
+      INSERT INTO subscriptions (
+        user_id, plan_name, status, start_date, next_renewal_date, end_date,
+        amount, currency, is_active, auto_renewal, trial_end_date
       )
       VALUES (
-        $1, $2, 'active', NOW(), NOW() + interval '7 days',
-        $3, $4, $5, $6
+        $1, $2, 'active', NOW(), NOW() + interval '7 days', NOW() + interval '7 days',
+        $3, $4, true, false, NOW() + interval '7 days'
       )
       RETURNING id
     `;
@@ -131,8 +123,6 @@ export async function POST(req: NextRequest) {
       plan_name,
       0, // amount
       "INR", // currency
-      trialId, // payment_id
-      JSON.stringify(preferences),
     ]);
 
     console.log(
@@ -140,24 +130,71 @@ export async function POST(req: NextRequest) {
       subscriptionResult.rows[0].id
     );
 
-    // Update trial record with subscription ID
+    // Update payment record with subscription ID
     await client.query(
-      "UPDATE user_payments SET subscription_id = $1 WHERE id = $2",
+      "UPDATE payments SET subscription_id = $1 WHERE id = $2",
       [subscriptionResult.rows[0].id, trialResult.rows[0].id]
     );
 
-    console.log("Trial record updated with subscription ID");
+    console.log("Payment record updated with subscription ID");
+
+    // Store user preferences if provided
+    if (preferences && Object.keys(preferences).length > 0) {
+      const preferencesInsert = `
+        INSERT INTO user_preferences (
+          user_id, role, industry, language, preferred_mode, frequency
+        )
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (user_id) DO UPDATE SET
+          role = EXCLUDED.role,
+          industry = EXCLUDED.industry,
+          language = EXCLUDED.language,
+          preferred_mode = EXCLUDED.preferred_mode,
+          frequency = EXCLUDED.frequency,
+          updated_at = CURRENT_TIMESTAMP
+      `;
+
+      await client.query(preferencesInsert, [
+        user_id,
+        preferences.role || null,
+        preferences.industry || null,
+        preferences.language || null,
+        preferences.preferred_mode || null,
+        preferences.frequency || null,
+      ]);
+
+      console.log("User preferences saved");
+    }
+
+    // Add subscription history record
+    await client.query(
+      `INSERT INTO subscription_history (
+        subscription_id, user_id, action, new_plan, amount, reason
+      ) VALUES ($1, $2, 'new_subscription', $3, $4, 'Free trial activation')`,
+      [subscriptionResult.rows[0].id, user_id, plan_name, 0]
+    );
+
+    console.log("Subscription history record created");
 
     // Commit transaction
     await client.query("COMMIT");
     console.log("Transaction committed successfully");
 
+    // Calculate trial expiration date
+    const trialExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
     return NextResponse.json({
       success: true,
-      trial_id: trialResult.rows[0].id,
+      payment_id: trialResult.rows[0].id,
       subscription_id: subscriptionResult.rows[0].id,
       message: "Free trial activated successfully",
-      trial_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+      trial_expires_at: trialExpiresAt.toISOString(),
+      plan_details: {
+        name: plan_name,
+        duration_days: 7,
+        amount: 0,
+        currency: "INR",
+      },
     });
 
   } catch (error) {

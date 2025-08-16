@@ -1,4 +1,4 @@
-// app/api/check-subscription/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import pool from "../../../utils/database";
 
@@ -28,11 +28,12 @@ export async function GET(req: NextRequest) {
         currency,
         created_at,
         updated_at,
+        is_active,
         CASE 
-          WHEN status = 'active' AND (next_renewal_date IS NULL OR next_renewal_date > NOW()) THEN true
+          WHEN status = 'active' AND is_active = true AND (next_renewal_date IS NULL OR next_renewal_date > CURRENT_TIMESTAMP) THEN true
           ELSE false
-        END as is_active
-      FROM user_subscriptions 
+        END as is_currently_active
+      FROM subscriptions 
       WHERE user_id = $1 
       ORDER BY created_at DESC 
       LIMIT 1
@@ -55,13 +56,14 @@ export async function GET(req: NextRequest) {
     let actualStatus = subscription.status;
     if (
       subscription.next_renewal_date &&
-      new Date(subscription.next_renewal_date) < new Date()
+      new Date(subscription.next_renewal_date) < new Date() &&
+      !subscription.auto_renewal
     ) {
       actualStatus = "expired";
 
       // Update the subscription status in database if it's expired
       await client.query(
-        "UPDATE user_subscriptions SET status = 'expired' WHERE id = $1",
+        "UPDATE subscriptions SET status = 'expired', is_active = false WHERE id = $1",
         [subscription.id]
       );
     }
@@ -69,10 +71,9 @@ export async function GET(req: NextRequest) {
     // Fetch user's selected topics
     const topicsQuery = `
       SELECT t.id, t.name, t.description, t.topic_type
-      FROM user_preference_topics upt
-      JOIN user_preferences up ON upt.user_preference_id = up.id
-      JOIN topic t ON upt.topic_id = t.id
-      WHERE up.user_id = $1
+      FROM user_topics ut
+      JOIN topics t ON ut.topic_id = t.id
+      WHERE ut.user_id = $1
       ORDER BY t.name
     `;
 

@@ -1,97 +1,61 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Menu, X, Sparkles, User, LogOut } from "lucide-react";
+import { Menu, X, Sparkles, User, LogOut, BookOpen, CreditCard, Settings } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
 
-interface UserStatus {
-  hasPreferences: boolean;
-  hasSubscription: boolean;
-}
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const handleLogout = () => {
-    logout();
-    setShowUserMenu(false);
-    setUserStatus(null);
-    router.push("/");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setShowUserMenu(false);
+      router.push("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const handleLoginClick = () => {
     if (isAuthenticated) {
       setShowUserMenu(!showUserMenu);
     } else {
-      router.push("/auth");
+      const currentPath = pathname !== "/auth" ? pathname : "/";
+      router.push(`/auth?redirect=${encodeURIComponent(currentPath)}`);
     }
   };
 
-  const checkUserStatus = async () => {
-    if (!user?.id || isCheckingStatus) return null;
-
-    try {
-      setIsCheckingStatus(true);
-      const res = await fetch(`/api/check-user-status?user_id=${user.id}`);
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setUserStatus({
-          hasPreferences: data.hasPreferences,
-          hasSubscription: data.hasSubscription,
-        });
-        return data;
-      } else {
-        setUserStatus(null);
-        return null;
-      }
-    } catch (error) {
-      console.error("Error checking user status:", error);
-      setUserStatus(null);
-      return null;
-    } finally {
-      setIsCheckingStatus(false);
-    }
-  };
-
-  const handleGetStartedClick = async () => {
+  const handleGetStartedClick = () => {
     if (!isAuthenticated) {
       router.push("/auth");
       return;
     }
-
-    const status = userStatus || (await checkUserStatus());
-
-    if (!status) return;
-
-    if (status.hasSubscription) {
-      router.push("/dashboard");
-    } else if (!status.hasPreferences) {
-      router.push("/preferences");
-    } else {
-      router.push("/payment");
-    }
+    // Simple flow (no server check)
+    router.push("/dashboard");
   };
 
-  useEffect(() => {
-    if (isAuthenticated && user?.id && !userStatus) {
-      checkUserStatus();
-    }
-  }, [isAuthenticated, user?.id]);
+  const handleExploreTopics = () => {
+    setShowUserMenu(false);
+    setIsMobileMenuOpen(false);
+    router.push("/topic-selection");
+  };
 
+  // Close menus on pathname change
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setShowUserMenu(false);
   }, [pathname]);
 
+  // Close user menu on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -101,7 +65,6 @@ const Header = () => {
         setShowUserMenu(false);
       }
     };
-
     if (showUserMenu) {
       document.addEventListener("mousedown", handleClickOutside);
     }
@@ -110,25 +73,27 @@ const Header = () => {
     };
   }, [showUserMenu]);
 
+  // Don’t show header on auth page
   if (pathname === "/auth") return null;
 
   const getButtonText = () => {
     if (!isAuthenticated) return "Get Started";
-    if (userStatus?.hasSubscription) return "Dashboard";
-    if (userStatus?.hasPreferences) return "Choose Plan";
-    return "Continue";
+    return "Dashboard"; // fixed (no dynamic status)
   };
 
   return (
-    <header className="relative bg-white shadow-md">
-      <nav className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <header className="relative bg-white shadow-md border-b border-gray-100">
+      <nav className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex justify-between items-center">
           {/* Logo */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
-            <Link href="/" className="text-3xl font-bold text-yellow-500">
+            <Link 
+              href="/" 
+              className="text-3xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent hover:scale-105 transition-transform"
+            >
               ULTRALIT
             </Link>
           </div>
@@ -137,14 +102,27 @@ const Header = () => {
           <div className="hidden md:flex items-center space-x-8">
             {/* Navigation Links */}
             <div className="flex items-center space-x-6">
-              <Link
-                href="/topic-selection"
-                className={`text-gray-700 hover:text-yellow-500 transition-colors font-medium ${
+              <button
+                onClick={handleExploreTopics}
+                className={`flex items-center space-x-2 text-gray-700 hover:text-yellow-500 transition-colors font-medium ${
                   pathname === "/topic-selection" ? "text-yellow-500" : ""
                 }`}
               >
-                Explore Topics
-              </Link>
+                <BookOpen className="w-4 h-4" />
+                <span>Explore Topics</span>
+              </button>
+
+              {isAuthenticated && (
+                <Link
+                  href="/dashboard"
+                  className={`flex items-center space-x-2 text-gray-700 hover:text-yellow-500 transition-colors font-medium ${
+                    pathname === "/dashboard" ? "text-yellow-500" : ""
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </Link>
+              )}
             </div>
 
             {/* User Menu */}
@@ -152,81 +130,81 @@ const Header = () => {
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={handleLoginClick}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-yellow-500 transition-colors font-medium"
+                  className="flex items-center space-x-2 text-gray-700 hover:text-yellow-500 transition-colors font-medium p-2 rounded-lg hover:bg-gray-50"
                 >
-                  <User className="w-4 h-4" />
-                  <span>{user?.name || "User"}</span>
-                  {userStatus?.hasSubscription && (
-                    <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      Active Plan
-                    </span>
-                  )}
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="max-w-32 truncate">{user?.name || "User"}</span>
                 </button>
 
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-68 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                    <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-200">
-                      <div className="font-medium">{user?.name || "User"}</div>
-                      <div className="text-gray-500">{user?.email}</div>
-                      {userStatus?.hasSubscription ? (
-                        <div className="mt-1 text-xs">
-                          <span className="px-2 py-1 rounded-full bg-green-100 text-green-800">
-                            Active Subscription
-                          </span>
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl py-2 z-50 border border-gray-200">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                          <User className="w-5 h-5 text-white" />
                         </div>
-                      ) : (
-                        <div className="mt-1 text-xs">
-                          <span className="px-2 py-1 rounded-full bg-red-100 text-red-800">
-                            No Subscription
-                          </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-gray-900 truncate">{user?.name || "User"}</div>
+                          <div className="text-sm text-gray-500 truncate">{user?.email}</div>
                         </div>
-                      )}
+                      </div>
                     </div>
-                    <Link
-                      href="/topic-selection"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      Explore Topics
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Logout
-                    </button>
+
+                    {/* Menu Items */}
+                    <div className="py-2">
+                      <button
+                        onClick={handleExploreTopics}
+                        className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <BookOpen className="w-4 h-4 mr-3 text-gray-400" />
+                        Explore Topics
+                      </button>
+
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setShowUserMenu(false)}
+                        className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <Settings className="w-4 h-4 mr-3 text-gray-400" />
+                        Dashboard
+                      </Link>
+
+                      <div className="border-t border-gray-100 mt-2 pt-2">
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut className="w-4 h-4 mr-3" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
             ) : (
               <button
                 onClick={handleLoginClick}
-                className="text-gray-700 hover:text-yellow-500 transition-colors font-medium"
+                className="text-gray-700 hover:text-yellow-500 transition-colors font-medium px-4 py-2 rounded-lg hover:bg-gray-50"
               >
-                Login
+                Sign In
               </button>
             )}
 
+            {/* CTA Button */}
             <button
               onClick={handleGetStartedClick}
-              disabled={isCheckingStatus}
-              className="bg-yellow-400 hover:bg-yellow-500 text-white px-8 py-3 rounded-full font-bold transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-50"
+              className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white px-6 py-3 rounded-full font-bold transition-all duration-300 hover:shadow-lg hover:scale-105"
             >
-              {isCheckingStatus ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Loading...
-                </div>
-              ) : (
-                getButtonText()
-              )}
+              {getButtonText()}
             </button>
           </div>
 
           {/* Mobile Menu Toggle */}
           <button
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-700"
+            className="md:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? (
@@ -239,81 +217,83 @@ const Header = () => {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-            <div className="px-4 py-6 space-y-4">
-              <Link
-                href="/topic-selection"
-                className={`block py-2 text-gray-700 hover:text-yellow-500 font-medium transition-colors ${
-                  pathname === "/topic-selection" ? "text-yellow-500" : ""
+          <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-xl z-50">
+            <div className="px-4 py-6 space-y-4 max-h-96 overflow-y-auto">
+              {/* Links */}
+              <button
+                onClick={handleExploreTopics}
+                className={`flex items-center w-full py-3 px-2 text-gray-700 hover:text-yellow-500 font-medium transition-colors rounded-lg hover:bg-gray-50 ${
+                  pathname === "/topic-selection" ? "text-yellow-500 bg-yellow-50" : ""
                 }`}
-                onClick={() => setIsMobileMenuOpen(false)}
               >
+                <BookOpen className="w-5 h-5 mr-3" />
                 Explore Topics
-              </Link>
-             
+              </button>
 
+              {isAuthenticated && (
+                <Link
+                  href="/dashboard"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center w-full py-3 px-2 text-gray-700 hover:text-yellow-500 font-medium transition-colors rounded-lg hover:bg-gray-50 ${
+                    pathname === "/dashboard" ? "text-yellow-500 bg-yellow-50" : ""
+                  }`}
+                >
+                  <Settings className="w-5 h-5 mr-3" />
+                  Dashboard
+                </Link>
+              )}
+
+              {/* User Section */}
               {isAuthenticated ? (
                 <div className="border-t border-gray-200 pt-4">
-                  <div className="flex items-center space-x-2 py-2 text-gray-700">
-                    <User className="w-4 h-4" />
-                    <div>
-                      <div className="font-medium">{user?.name || "User"}</div>
-                      <div className="text-sm text-gray-500">{user?.email}</div>
-                      {userStatus?.hasSubscription ? (
-                        <div className="mt-1">
-                          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                            Active Subscription
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="mt-1">
-                          <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
-                            No Subscription
-                          </span>
-                        </div>
-                      )}
+                  <div className="flex items-center space-x-3 py-3 px-2">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 truncate">{user?.name || "User"}</div>
+                      <div className="text-sm text-gray-500 truncate">{user?.email}</div>
                     </div>
                   </div>
+
                   <button
                     onClick={() => {
                       handleLogout();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex items-center w-full py-2 text-gray-700 hover:text-red-500 transition-colors"
+                    className="flex items-center w-full py-3 px-2 text-red-600 hover:text-red-700 font-medium transition-colors rounded-lg hover:bg-red-50"
                   >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
+                    <LogOut className="w-5 h-5 mr-3" />
+                    Sign Out
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => {
-                    handleLoginClick();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="block py-2 text-gray-700 hover:text-yellow-500 font-medium"
-                >
-                  Login
-                </button>
+                <div className="border-t border-gray-200 pt-4">
+                  <button
+                    onClick={() => {
+                      handleLoginClick();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center w-full py-3 px-2 text-gray-700 hover:text-yellow-500 font-medium transition-colors rounded-lg hover:bg-gray-50"
+                  >
+                    <User className="w-5 h-5 mr-3" />
+                    Sign In
+                  </button>
+                </div>
               )}
 
-              <button
-                onClick={() => {
-                  handleGetStartedClick();
-                  setIsMobileMenuOpen(false);
-                }}
-                disabled={isCheckingStatus}
-                className="w-full bg-yellow-400 hover:bg-yellow-500 text-white px-6 py-3 rounded-full font-bold mt-4 shadow-md disabled:opacity-50"
-              >
-                {isCheckingStatus ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Loading...
-                  </div>
-                ) : (
-                  getButtonText()
-                )}
-              </button>
+              {/* CTA */}
+              <div className="pt-4">
+                <button
+                  onClick={() => {
+                    handleGetStartedClick();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white px-6 py-4 rounded-full font-bold shadow-lg transition-all duration-300 hover:shadow-xl"
+                >
+                  {getButtonText()}
+                </button>
+              </div>
             </div>
           </div>
         )}

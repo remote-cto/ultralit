@@ -1,4 +1,5 @@
 //app/api/get-user-preferences
+// app/api/get-user-preferences/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
 import pool from "../../../utils/database";
@@ -16,17 +17,28 @@ export async function GET(request: NextRequest) {
     }
 
     const query = `
-      SELECT up.role,
-             up.industry,
-             up.language,
-             up.preferred_mode,
-             up.frequency,
-             COALESCE(json_agg(upt.topic_id) FILTER (WHERE upt.topic_id IS NOT NULL), '[]') AS topic_ids
+      SELECT 
+        up.role,
+        up.industry,
+        up.language,
+        up.preferred_mode,
+        up.frequency,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', ut.topic_id,
+              'name', t.name,
+              'description', t.description,
+              'topic_type', t.topic_type
+            )
+          ) FILTER (WHERE ut.topic_id IS NOT NULL), 
+          '[]'
+        ) AS topics
       FROM user_preferences up
-      LEFT JOIN user_preference_topics upt
-        ON up.id = upt.user_preference_id
+      LEFT JOIN user_topics ut ON up.user_id = ut.user_id
+      LEFT JOIN topics t ON ut.topic_id = t.id
       WHERE up.user_id = $1
-      GROUP BY up.id
+      GROUP BY up.id, up.role, up.industry, up.language, up.preferred_mode, up.frequency
       ORDER BY up.created_at DESC
       LIMIT 1
     `;
