@@ -112,7 +112,7 @@ const Header = () => {
                 <span>Explore Topics</span>
               </button>
 
-              {isAuthenticated && (
+              {/* {isAuthenticated && (
                 <Link
                   href="/dashboard"
                   className={`flex items-center space-x-2 text-gray-700 hover:text-yellow-500 transition-colors font-medium ${
@@ -122,7 +122,7 @@ const Header = () => {
                   <Settings className="w-4 h-4" />
                   <span>Dashboard</span>
                 </Link>
-              )}
+              )} */}
             </div>
 
             {/* User Menu */}
@@ -161,7 +161,7 @@ const Header = () => {
                         <BookOpen className="w-4 h-4 mr-3 text-gray-400" />
                         Explore Topics
                       </button>
-
+{/* 
                       <Link
                         href="/dashboard"
                         onClick={() => setShowUserMenu(false)}
@@ -169,7 +169,7 @@ const Header = () => {
                       >
                         <Settings className="w-4 h-4 mr-3 text-gray-400" />
                         Dashboard
-                      </Link>
+                      </Link> */}
 
                       <div className="border-t border-gray-100 mt-2 pt-2">
                         <button
@@ -230,7 +230,7 @@ const Header = () => {
                 Explore Topics
               </button>
 
-              {isAuthenticated && (
+              {/* {isAuthenticated && (
                 <Link
                   href="/dashboard"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -241,7 +241,7 @@ const Header = () => {
                   <Settings className="w-5 h-5 mr-3" />
                   Dashboard
                 </Link>
-              )}
+              )} */}
 
               {/* User Section */}
               {isAuthenticated ? (
