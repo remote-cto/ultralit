@@ -4,10 +4,10 @@ import pool from "../../../utils/database";
 
 export async function GET(req: NextRequest) {
   const client = await pool.connect();
-  
+
   try {
     const { searchParams } = new URL(req.url);
-    const user_id = searchParams.get('user_id');
+    const user_id = searchParams.get("user_id");
 
     if (!user_id) {
       return NextResponse.json(
@@ -45,17 +45,20 @@ export async function GET(req: NextRequest) {
         success: true,
         hasSubscription: false,
         subscription: null,
-        message: "No subscription found"
+        message: "No subscription found",
       });
     }
 
     const subscription = subscriptionResult.rows[0];
-    
+
     // Check if subscription is expired
     let actualStatus = subscription.status;
-    if (subscription.next_renewal_date && new Date(subscription.next_renewal_date) < new Date()) {
-      actualStatus = 'expired';
-      
+    if (
+      subscription.next_renewal_date &&
+      new Date(subscription.next_renewal_date) < new Date()
+    ) {
+      actualStatus = "expired";
+
       // Update the subscription status in database if it's expired
       await client.query(
         "UPDATE user_subscriptions SET status = 'expired' WHERE id = $1",
@@ -69,17 +72,19 @@ export async function GET(req: NextRequest) {
       subscription: {
         ...subscription,
         status: actualStatus,
-        is_active: actualStatus === 'active' && subscription.is_active
-      }
+        is_active: actualStatus === "active" && subscription.is_active,
+      },
     });
-
   } catch (error) {
     console.error("Error checking subscription:", error);
     return NextResponse.json(
       {
         success: false,
         error: "Failed to check subscription status",
-        details: process.env.NODE_ENV === "development" ? (error as Error).message : undefined,
+        details:
+          process.env.NODE_ENV === "development"
+            ? (error as Error).message
+            : undefined,
       },
       { status: 500 }
     );

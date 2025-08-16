@@ -135,6 +135,25 @@ const Header = () => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
+            {/* Navigation Links */}
+            <div className="flex items-center space-x-6">
+              <Link 
+                href="/topic-selection" 
+                className={`text-gray-700 hover:text-yellow-500 transition-colors font-medium ${
+                  pathname === "/topic-selection" ? "text-yellow-500" : ""
+                }`}
+              >
+                Explore Topics
+              </Link>
+              <a
+                href="#pricing"
+                className="text-gray-700 hover:text-yellow-500 transition-colors font-medium"
+              >
+                Pricing
+              </a>
+            </div>
+
+            {/* User Menu */}
             {isAuthenticated ? (
               <div className="relative" ref={userMenuRef}>
                 <button
@@ -169,6 +188,13 @@ const Header = () => {
                         </div>
                       )}
                     </div>
+                    <Link
+                      href="/topic-selection"
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      Explore Topics
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
@@ -221,6 +247,15 @@ const Header = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
             <div className="px-4 py-6 space-y-4">
+              <Link
+                href="/topic-selection"
+                className={`block py-2 text-gray-700 hover:text-yellow-500 font-medium transition-colors ${
+                  pathname === "/topic-selection" ? "text-yellow-500" : ""
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Explore Topics
+              </Link>
               <a
                 href="#pricing"
                 className="block py-2 text-gray-700 hover:text-yellow-500 font-medium"

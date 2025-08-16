@@ -5,22 +5,13 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext"; // Import the auth context
 
-interface Topic {
-  id: number;
-  name: string;
-  description: string;
-  topic_type: number;
-}
-
 const UserPreferences = () => {
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [preferences, setPreferences] = useState({
     role: "",
     industry: "",
     language: "English",
-    topicId: 0,
     preferredMode: "Whatsapp",
     frequency: "Weekly",
     otherIndustry: "",
@@ -64,49 +55,6 @@ const UserPreferences = () => {
     }
   }, [isAuthenticated, user, router]);
 
-  // Fetch topics from DB
-  useEffect(() => {
-    const fetchTopics = async () => {
-      try {
-        // Fetch topics with GET request (you'll need to create this endpoint)
-        const res = await fetch("/api/fetch-topics", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        
-        const data = await res.json();
-        if (data.success) {
-          setTopics(data.topics || []);
-        } else {
-          console.error("Failed to load topics:", data.error);
-          alert("Failed to load topics. Please refresh the page.");
-        }
-      } catch (error) {
-        console.error("Error fetching topics:", error);
-        alert("Error loading topics. Please check your connection and try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    // Only fetch if user is authenticated
-    if (isAuthenticated && user) {
-      fetchTopics();
-    }
-  }, [isAuthenticated, user]);
-
-  // Handle topic selection
-  const handleTopicChange = (topicId: number) => {
-    setPreferences((prev) => ({
-      ...prev,
-      topicId,
-    }));
-  };
-
   // Handle industry change
   const handleIndustryChange = (industry: string) => {
     setPreferences((prev) => ({
@@ -116,7 +64,7 @@ const UserPreferences = () => {
     }));
   };
 
-  // Save preferences
+  // Save preferences and go to topic selection
   const handleNext = async () => {
     // Validation
     if (!preferences.role) {
@@ -133,10 +81,6 @@ const UserPreferences = () => {
     }
     if (!preferences.language) {
       alert("Please select your preferred language");
-      return;
-    }
-    if (!preferences.topicId) {
-      alert("Please select what you want to learn");
       return;
     }
 
@@ -159,7 +103,6 @@ const UserPreferences = () => {
         role: preferences.role,
         industry: finalIndustry,
         language: preferences.language,
-        topic_ids: [preferences.topicId],
         preferred_mode: preferences.preferredMode,
         frequency: preferences.frequency,
       };
@@ -181,8 +124,8 @@ const UserPreferences = () => {
       const data = await res.json();
 
       if (data.success) {
-        
-        router.push("/payment");
+        // Navigate to topic selection page
+        router.push("/topic-selection");
       } else {
         alert("Failed to save preferences: " + (data.error || "Unknown error"));
       }
@@ -194,15 +137,13 @@ const UserPreferences = () => {
     }
   };
 
-  // Show loading screen while checking authentication or loading topics
-  if (!isAuthenticated || !user || loading) {
+  // Show loading screen while checking authentication
+  if (!isAuthenticated || !user) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">
-            {!isAuthenticated || !user ? "Checking authentication..." : "Loading topics..."}
-          </p>
+          <p className="text-gray-600">Checking authentication...</p>
         </div>
       </div>
     );
@@ -350,57 +291,13 @@ const UserPreferences = () => {
             </div>
           </div>
 
-          {/* Section 4: Topics of Interest */}
-          <div className="mb-10">
-            <h2 className="text-2xl font-bold text-blue-800 mb-6 flex items-center">
-              <span className="bg-yellow-400 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold mr-3">
-                📚
-              </span>
-              Step 4: Topics of Interest
-            </h2>
-
-            {topics.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No topics available. Please contact support.</p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {topics.map((topic) => (
-                  <label
-                    key={topic.id}
-                    className={`flex items-start p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg ${
-                      preferences.topicId === topic.id
-                        ? "border-yellow-400 bg-yellow-50 shadow-lg"
-                        : "border-gray-200 hover:border-yellow-300"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="topic"
-                      value={topic.id}
-                      checked={preferences.topicId === topic.id}
-                      onChange={() => handleTopicChange(topic.id)}
-                      className="mt-1 mr-4 w-5 h-5 text-yellow-500 border-2 border-gray-300 focus:ring-yellow-400"
-                    />
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {topic.name}
-                      </h3>
-                      <p className="text-gray-600 text-sm">{topic.description}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Section 5: Mode of Delivery */}
+          {/* Section 4: Mode of Delivery */}
           <div className="mb-10">
             <h2 className="text-2xl font-bold text-blue-800 mb-6 flex items-center">
               <span className="bg-yellow-400 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold mr-3">
                 📱
               </span>
-              Step 5: Mode of Delivery
+              Step 4: Mode of Delivery
             </h2>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -432,13 +329,13 @@ const UserPreferences = () => {
             </div>
           </div>
 
-          {/* Section 6: Frequency of Delivery */}
+          {/* Section 5: Frequency of Delivery */}
           <div className="mb-10">
             <h2 className="text-2xl font-bold text-blue-800 mb-6 flex items-center">
               <span className="bg-yellow-400 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold mr-3">
                 ⏰
               </span>
-              Step 6: Frequency of Delivery
+              Step 5: Frequency of Delivery
             </h2>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -490,8 +387,10 @@ const UserPreferences = () => {
             <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
             <div className="w-8 h-1 bg-yellow-400"></div>
             <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+            <div className="w-8 h-1 bg-gray-300"></div>
+            <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
           </div>
-          <span className="ml-4 text-sm text-gray-600">Step 2 of 3</span>
+          <span className="ml-4 text-sm text-gray-600">Step 2 of 4</span>
         </div>
       </div>
     </div>

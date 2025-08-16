@@ -1,5 +1,5 @@
 // app/api/get-user-topic-subscriptions/route.ts
-// app/api/get-user-topic-subscriptions/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import pool from "../../../utils/database";
 
