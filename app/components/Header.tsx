@@ -137,20 +137,14 @@ const Header = () => {
           <div className="hidden md:flex items-center space-x-8">
             {/* Navigation Links */}
             <div className="flex items-center space-x-6">
-              <Link 
-                href="/topic-selection" 
+              <Link
+                href="/topic-selection"
                 className={`text-gray-700 hover:text-yellow-500 transition-colors font-medium ${
                   pathname === "/topic-selection" ? "text-yellow-500" : ""
                 }`}
               >
                 Explore Topics
               </Link>
-              <a
-                href="#pricing"
-                className="text-gray-700 hover:text-yellow-500 transition-colors font-medium"
-              >
-                Pricing
-              </a>
             </div>
 
             {/* User Menu */}
@@ -256,13 +250,7 @@ const Header = () => {
               >
                 Explore Topics
               </Link>
-              <a
-                href="#pricing"
-                className="block py-2 text-gray-700 hover:text-yellow-500 font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Pricing
-              </a>
+             
 
               {isAuthenticated ? (
                 <div className="border-t border-gray-200 pt-4">
