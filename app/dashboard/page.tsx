@@ -206,18 +206,18 @@ export default function Dashboard() {
               </div>
             </div>
             
-            {subscription.topics && subscription.topics.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-700 mb-2">Subscribed Topics:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {subscription.topics.map((topic, index) => (
-                    <span key={index} className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+          {subscription.topics && subscription.topics.length > 0 && (
+  <div>
+    <h4 className="font-medium text-gray-700 mb-2">Subscribed Topics:</h4>
+    <div className="flex flex-wrap gap-2">
+      {subscription.topics.map((topic, index) => (
+        <span key={index} className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
+          {topic}
+        </span>
+      ))}
+    </div>
+  </div>
+)}
           </div>
         ) : (
           <div className="text-center py-8">

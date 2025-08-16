@@ -66,6 +66,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Fetch user's selected topics
+    const topicsQuery = `
+      SELECT t.id, t.name, t.description, t.topic_type
+      FROM user_preference_topics upt
+      JOIN user_preferences up ON upt.user_preference_id = up.id
+      JOIN topic t ON upt.topic_id = t.id
+      WHERE up.user_id = $1
+      ORDER BY t.name
+    `;
+
+    const topicsResult = await client.query(topicsQuery, [user_id]);
+    const userTopics = topicsResult.rows.map(topic => topic.name);
+
     return NextResponse.json({
       success: true,
       hasSubscription: true,
@@ -73,6 +86,7 @@ export async function GET(req: NextRequest) {
         ...subscription,
         status: actualStatus,
         is_active: actualStatus === "active" && subscription.is_active,
+        topics: userTopics, // Add the topics array here
       },
     });
   } catch (error) {

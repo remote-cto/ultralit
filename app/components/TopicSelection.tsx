@@ -118,7 +118,7 @@ const TopicSelection = () => {
   };
 
   const handleBack = () => {
-    router.push("/user-preferences");
+    router.push("/preferences");
   };
 
   // Render domain -> subtopics workflow

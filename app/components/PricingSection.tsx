@@ -26,8 +26,8 @@ const PricingSection = () => {
     },
     {
       name: "Students",
-      price: "₹10",
-      amount: 10,
+      price: "₹200",
+      amount: 500,
       period: "/month",
       description: "Perfect for learners and aspiring professionals",
       icon: "🎓",
@@ -42,8 +42,8 @@ const PricingSection = () => {
     },
     {
       name: "Professionals & Executives",
-      price: "₹10",
-      amount: 10,
+      price: "₹500",
+      amount: 500,
       period: "/month",
       description: "For working professionals and business leaders",
       icon: "💼",
