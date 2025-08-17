@@ -420,7 +420,8 @@ const AuthForm = () => {
               <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
               <div className="w-8 h-1 bg-gray-300"></div>
               <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-              <span className="ml-4 text-sm text-gray-600">Step 1 of 3</span>
+              <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              <span className="ml-4 text-sm text-gray-600">Step 1 of 4</span>
             </div>
           </div>
         )}
