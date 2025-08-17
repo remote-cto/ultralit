@@ -53,7 +53,8 @@ export default function Dashboard() {
   const [editedPreferences, setEditedPreferences] =
     useState<Preferences | null>(null);
   const [saving, setSaving] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Changed default to false for mobile-first
+  const [isMobile, setIsMobile] = useState(false);
 
   // Options for preferences
   const roleOptions = [
@@ -93,6 +94,22 @@ export default function Dashboard() {
     { id: "settings", label: "Settings", icon: Settings },
     { id: "payment", label: "Payment Information", icon: CreditCard },
   ];
+
+  // Handle responsive behavior
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // Auto-open sidebar on desktop, keep closed on mobile
+      if (!mobile && !sidebarOpen) {
+        setSidebarOpen(true);
+      }
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, [sidebarOpen]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -136,6 +153,10 @@ export default function Dashboard() {
 
   const handleRouteNavigation = (route: string) => {
     router.push(route);
+    // Close sidebar on mobile after navigation
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
   };
 
   const handleSavePreferences = async () => {
@@ -198,8 +219,8 @@ export default function Dashboard() {
 
   if (!isAuthenticated || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50">
-        <div className="animate-pulse text-lg font-medium text-gray-700">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 px-4">
+        <div className="animate-pulse text-lg font-medium text-gray-700 text-center">
           Loading your dashboard...
         </div>
       </div>
@@ -207,21 +228,21 @@ export default function Dashboard() {
   }
 
   const renderSubscriptions = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-        <BookOpen className="mr-3 text-blue-600" />
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+        <BookOpen className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
         My Subscriptions
       </h2>
 
-      <div className="bg-white rounded-xl p-6 shadow-lg">
+      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
         {subscription ? (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
               <h3 className="text-lg font-semibold">
                 {subscription.plan_name}
               </h3>
               <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                className={`px-3 py-1 rounded-full text-sm font-medium self-start sm:self-auto ${
                   subscription.status === "active"
                     ? "bg-green-100 text-green-700"
                     : subscription.status === "expired"
@@ -233,7 +254,7 @@ export default function Dashboard() {
               </span>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <div>
                 <h4 className="font-medium text-gray-700">Plan Amount</h4>
                 <p className="text-gray-800">
@@ -295,33 +316,33 @@ export default function Dashboard() {
   );
 
   const renderSettings = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-          <Settings className="mr-3 text-blue-600" />
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+          <Settings className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
           Settings
         </h2>
         {!editingPreferences ? (
           <button
             onClick={() => setEditingPreferences(true)}
-            className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
           >
             <Edit2 className="w-4 h-4 mr-2" />
             Edit Preferences
           </button>
         ) : (
-          <div className="flex space-x-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               onClick={handleSavePreferences}
               disabled={saving}
-              className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              className="flex items-center justify-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
             >
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Saving..." : "Save"}
             </button>
             <button
               onClick={handleCancelEdit}
-              className="flex items-center bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+              className="flex items-center justify-center bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
             >
               <X className="w-4 h-4 mr-2" />
               Cancel
@@ -330,7 +351,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="bg-white rounded-xl p-6 shadow-lg">
+      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
         {preferences ? (
           <div className="space-y-6">
             {/* Role */}
@@ -355,7 +376,7 @@ export default function Dashboard() {
                   ))}
                 </select>
               ) : (
-                <p className="text-gray-800 p-3 bg-gray-50 rounded-lg">
+                <p className="text-gray-800 p-3 bg-gray-50 rounded-lg break-words">
                   {preferences.role}
                 </p>
               )}
@@ -383,7 +404,7 @@ export default function Dashboard() {
                   ))}
                 </select>
               ) : (
-                <p className="text-gray-800 p-3 bg-gray-50 rounded-lg">
+                <p className="text-gray-800 p-3 bg-gray-50 rounded-lg break-words">
                   {preferences.industry}
                 </p>
               )}
@@ -481,19 +502,19 @@ export default function Dashboard() {
   );
 
   const renderPaymentInfo = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-        <CreditCard className="mr-3 text-blue-600" />
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+        <CreditCard className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
         Payment Information
       </h2>
 
-      <div className="bg-white rounded-xl p-6 shadow-lg">
+      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
         {subscription ? (
           <div className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <h3 className="font-medium text-gray-700">Plan Name</h3>
-                <p className="text-gray-800">{subscription.plan_name}</p>
+                <p className="text-gray-800 break-words">{subscription.plan_name}</p>
               </div>
               <div>
                 <h3 className="font-medium text-gray-700">Amount</h3>
@@ -527,7 +548,7 @@ export default function Dashboard() {
               <div>
                 <h3 className="font-medium text-gray-700">Payment Status</h3>
                 <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
                     subscription.status === "active"
                       ? "bg-green-100 text-green-700"
                       : subscription.status === "expired"
@@ -544,7 +565,7 @@ export default function Dashboard() {
               <h4 className="font-medium text-blue-800 mb-2">
                 Subscription Details
               </h4>
-              <div className="text-sm text-blue-700">
+              <div className="text-sm text-blue-700 space-y-1">
                 <p>Created: {formatDate(subscription.created_at)}</p>
                 <p>Last Updated: {formatDate(subscription.updated_at)}</p>
               </div>
@@ -579,12 +600,22 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-yellow-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-yellow-100 flex relative">
+      {/* Mobile Overlay */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <div
         className={`${
-          sidebarOpen ? "w-64" : "w-16"
-        } bg-white shadow-lg transition-all duration-300 flex-shrink-0`}
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } ${isMobile ? "fixed" : "relative"} ${
+          isMobile ? "w-64 z-50" : sidebarOpen ? "w-64" : "w-16"
+        } bg-white shadow-lg transition-all duration-300 flex-shrink-0 h-screen overflow-y-auto`}
       >
         <div className="p-4">
           <div className="flex items-center justify-between">
@@ -609,7 +640,7 @@ export default function Dashboard() {
         </div>
 
         {/* Sidebar Navigation (Routes) */}
-        <nav className="mt-8">
+        <nav className="mt-8 flex-1">
           <div className="mb-4">
             <h3 className={`px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider ${sidebarOpen ? "block" : "hidden"}`}>
               Navigation
@@ -632,28 +663,28 @@ export default function Dashboard() {
         </nav>
 
         {/* User section at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+        <div className="p-4 border-t mt-auto">
           <div
             className={`flex items-center ${
               sidebarOpen ? "justify-between" : "justify-center"
             }`}
           >
             {sidebarOpen && (
-              <div className="flex items-center">
-                <User className="w-8 h-8 text-gray-600 mr-2" />
-                <div>
-                  <p className="text-sm font-medium text-gray-800">
+              <div className="flex items-center min-w-0 flex-1">
+                <User className="w-8 h-8 text-gray-600 mr-2 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-800 truncate">
                     {user?.name}
                   </p>
-                  <p className="text-xs text-gray-600">{user?.email}</p>
+                  <p className="text-xs text-gray-600 truncate">{user?.email}</p>
                 </div>
               </div>
             )}
             <button
               onClick={handleLogout}
               className={`${
-                sidebarOpen ? "p-2" : "p-3"
-              } text-red-500 hover:bg-red-50 rounded-lg transition-colors`}
+                sidebarOpen ? "p-2 ml-2" : "p-3"
+              } text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0`}
               title="Logout"
             >
               <LogOut className="w-4 h-4" />
@@ -663,35 +694,48 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto min-w-0">
         {/* Header */}
         <div className="bg-white shadow-sm border-b">
-          <div className="px-6 py-4">
+          <div className="px-4 sm:px-6 py-4">
             <div className="flex justify-between items-center">
-              <h1 className="text-2xl font-bold text-blue-800">
-                Welcome back,{" "}
-                <span className="text-yellow-600">{user?.name}</span>!
-              </h1>
+              <div className="flex items-center min-w-0">
+                {/* Mobile menu button */}
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors mr-2"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+                <h1 className="text-lg sm:text-2xl font-bold text-blue-800 truncate">
+                  Welcome back,{" "}
+                  <span className="text-yellow-600">{user?.name}</span>!
+                </h1>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Tab Navigation */}
         <div className="bg-white shadow-sm border-b">
-          <div className="px-6">
-            <div className="flex space-x-8">
+          <div className="px-4 sm:px-6">
+            <div className="flex space-x-4 sm:space-x-8 overflow-x-auto">
               {tabItems.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   onClick={() => setActiveTab(id)}
-                  className={`flex items-center py-4 px-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex items-center py-4 px-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                     activeTab === id
                       ? "border-blue-500 text-blue-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 >
-                  <Icon className="w-4 h-4 mr-2" />
-                  {label}
+                  <Icon className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span className="hidden sm:inline">{label}</span>
+                  <span className="sm:hidden">
+                    {id === "subscriptions" ? "Subs" : 
+                     id === "settings" ? "Settings" : "Payment"}
+                  </span>
                 </button>
               ))}
             </div>
@@ -699,7 +743,7 @@ export default function Dashboard() {
         </div>
 
         {/* Content */}
-        <div className="p-6">{renderContent()}</div>
+        <div className="p-4 sm:p-6">{renderContent()}</div>
       </div>
     </div>
   );
