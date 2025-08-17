@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: false,
       error: "Internal server error",
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 });
   } finally {
     client.release();
@@ -219,7 +219,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: false,
       error: "Internal server error",
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     }, { status: 500 });
   } finally {
     client.release();
