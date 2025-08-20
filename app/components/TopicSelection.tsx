@@ -1,5 +1,3 @@
-//app/components/TopicSelection.tsx
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -21,7 +19,6 @@ const domains = [
     name: "Artificial Intelligence",
     description: "Design, deploy, and understand smart systems.",
   },
-  
 ];
 
 const TopicSelection = () => {
@@ -41,7 +38,6 @@ const TopicSelection = () => {
   useEffect(() => {
     const redirect = searchParams.get('redirect');
     if (redirect === 'topic-selection' && isAuthenticated) {
-      // Restore any saved selections
       const savedTopic = sessionStorage.getItem('pendingTopicSelection');
       const savedDomain = sessionStorage.getItem('pendingDomainSelection');
       
@@ -91,14 +87,13 @@ const TopicSelection = () => {
   // Handle domain selection
   const handleDomainSelect = (domainId: number) => {
     setSelectedDomain(domainId);
-    setSelectedTopic(null); // Reset topic selection when domain changes
+    setSelectedTopic(null);
     setShowAuthPrompt(false);
   };
 
   // Handle topic selection
   const handleTopicSelect = (topicId: number) => {
     if (!isAuthenticated) {
-      // Save selections for after login
       sessionStorage.setItem('pendingTopicSelection', topicId.toString());
       sessionStorage.setItem('pendingDomainSelection', selectedDomain?.toString() || '');
       setShowAuthPrompt(true);
@@ -142,16 +137,11 @@ const TopicSelection = () => {
 
       const data = await res.json();
       if (data.success) {
-        // Clear any pending selections
         sessionStorage.removeItem('pendingTopicSelection');
         sessionStorage.removeItem('pendingDomainSelection');
-        
-        // Navigate to payment page instead of preferences
         router.push("/payment");
       } else {
-        alert(
-          "Failed to save topic selection: " + (data.error || "Unknown error")
-        );
+        alert("Failed to save topic selection: " + (data.error || "Unknown error"));
       }
     } catch (error) {
       console.error("Error saving topic selection:", error);
@@ -165,11 +155,10 @@ const TopicSelection = () => {
     router.push("/");
   };
 
-  // Get appropriate button text based on authentication status
   const getNextButtonText = () => {
     if (!isAuthenticated) return 'Sign Up to Continue';
     if (saving) return 'Saving...';
-    return 'Continue to Payment';
+    return 'Confirm & Continue';
   };
 
   // Render authentication prompt
@@ -209,19 +198,19 @@ const TopicSelection = () => {
     return (
       <div className="space-y-8">
         {/* Domain Selection */}
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {domains.map((domain) => (
             <div
               key={domain.id}
               onClick={() => handleDomainSelect(domain.id)}
-              className={`p-6 border-2 rounded-lg cursor-pointer hover:shadow-lg transition-all duration-300
+              className={`p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg
                 ${
                   selectedDomain === domain.id
                     ? "border-yellow-400 bg-yellow-50 shadow-lg"
-                    : "bg-white hover:border-yellow-400"
+                    : "border-gray-200 bg-white hover:border-yellow-400"
                 }`}
             >
-              <h3 className="text-lg font-bold text-blue-700 mb-2">
+              <h3 className="text-xl font-bold text-blue-700 mb-3">
                 {domain.name}
               </h3>
               <p className="text-gray-600">{domain.description}</p>
@@ -231,15 +220,15 @@ const TopicSelection = () => {
 
         {/* Subtopics Section */}
         {selectedDomain && (
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold text-blue-800 mb-6 text-center">
-              Select a Subtopic
-            </h2>
+          <div className="mt-8 p-6 bg-yellow-50 border border-yellow-300 border-dashed rounded-lg">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4">
+              Select a Subtopic:
+            </h4>
 
             {loading && (
               <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500"></div>
-                <p className="text-gray-500 mt-4">Loading subtopics...</p>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mb-4"></div>
+                <p className="text-gray-500">Loading subtopics...</p>
               </div>
             )}
 
@@ -250,45 +239,44 @@ const TopicSelection = () => {
             )}
 
             {!loading && topics.length > 0 && (
-              <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="space-y-3">
                 {topics.map((topic) => (
-                  <div
+                  <button
                     key={topic.id}
                     onClick={() => handleTopicSelect(topic.id)}
-                    className={`p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg 
+                    className={`inline-block mx-1 my-1 px-4 py-2 rounded-full text-sm font-medium cursor-pointer transition-all duration-200
                       ${
                         selectedTopic === topic.id
-                          ? "border-yellow-400 bg-yellow-50 shadow-lg"
-                          : "border-gray-200 hover:border-yellow-300"
+                          ? "bg-yellow-400 text-black font-bold"
+                          : "bg-gray-200 text-gray-700 hover:bg-yellow-200"
                       }`}
                   >
-                    <div className="flex items-start">
-                      <input
-                        type="radio"
-                        name="topic"
-                        value={topic.id}
-                        checked={selectedTopic === topic.id}
-                        onChange={() => {}} // Handled by div onClick
-                        className="mt-1 mr-4 w-5 h-5 text-yellow-500 border-gray-300 focus:ring-yellow-400"
-                      />
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                          {topic.name}
-                        </h3>
-                        <p className="text-gray-600 text-sm leading-relaxed">
-                          {topic.description}
-                        </p>
-                        {!isAuthenticated && (
-                          <p className="text-yellow-600 text-xs mt-2 font-medium">
-                            Click to select (login required)
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    {topic.name}
+                    {!isAuthenticated && (
+                      <span className="ml-1 text-xs">(login required)</span>
+                    )}
+                  </button>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Topic Details Panel */}
+        {selectedTopic && (
+          <div className="mt-6 p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+            {(() => {
+              const topic = topics.find(t => t.id === selectedTopic);
+              return topic ? (
+                <>
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">{topic.name}</h3>
+                  <p className="text-gray-600 mb-3">
+                    <strong>What You'll Learn:</strong> {topic.description}
+                  </p>
+                  
+                </>
+              ) : null;
+            })()}
           </div>
         )}
       </div>
@@ -299,14 +287,12 @@ const TopicSelection = () => {
   const renderOtherTabs = () => {
     return (
       <div className="text-center text-gray-500 py-20">
-        <div className="mb-4">
-          <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto flex items-center justify-center mb-4">
-            <span className="text-2xl">🚀</span>
-          </div>
+        <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto flex items-center justify-center mb-4">
+          <span className="text-2xl">🚀</span>
         </div>
         <h3 className="text-xl font-semibold mb-2">Coming Soon!</h3>
-        <p className="text-gray-400">{activeTab} content is being prepared for you.</p>
-        <p className="text-sm text-gray-400 mt-2">
+        <p className="text-gray-400 mb-2">{activeTab} content is being prepared for you.</p>
+        <p className="text-sm text-gray-400">
           Meanwhile, explore our available topics in "Learn by Domain"
         </p>
       </div>
@@ -314,14 +300,12 @@ const TopicSelection = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-12 px-4">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'Segoe UI', sans-serif" }}>
+      <div className="container mx-auto px-8 py-8 max-w-6xl">
         {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4">
-            Explore <span className="text-yellow-500">Topics</span>
-          </h1>
-          <p className="text-lg text-gray-600">
+        <div className="text-center mb-8">
+          <h2 className="text-4xl font-bold text-gray-800 mb-4">Explore Topics</h2>
+          <p className="text-lg text-gray-600 mb-4">
             Choose a topic that matches your learning goals
           </p>
           
@@ -334,7 +318,7 @@ const TopicSelection = () => {
             </div>
           )}
 
-          {/* Simple welcome message for authenticated users */}
+          {/* Welcome message for authenticated users */}
           {isAuthenticated && user?.name && (
             <div className="mt-4 p-4 bg-green-100 rounded-lg border border-green-200">
               <p className="text-green-800 text-sm">
@@ -345,13 +329,13 @@ const TopicSelection = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex justify-center mb-8 space-x-6 border-b border-gray-300 overflow-x-auto">
+        <div className="flex justify-center mb-8 gap-8 border-b border-gray-300 overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab}
-              className={`pb-2 px-2 text-lg font-medium whitespace-nowrap ${
+              className={`pb-3 px-4 text-lg font-medium whitespace-nowrap transition-all duration-200 ${
                 activeTab === tab
-                  ? "border-b-4 border-yellow-500 text-blue-800"
+                  ? "border-b-4 border-yellow-400 text-gray-800"
                   : "text-gray-500 hover:text-gray-700"
               }`}
               onClick={() => {
@@ -368,16 +352,18 @@ const TopicSelection = () => {
           ))}
         </div>
 
-        {/* Tab Content */}
-        <div className="bg-white rounded-xl shadow-lg p-8 border border-yellow-200 min-h-[400px]">
+        {/* Content Area */}
+        <div className="bg-white rounded-xl shadow-lg p-8 border border-yellow-200 min-h-[500px]">
           {activeTab === "Learn by Domain" ? renderDomainView() : renderOtherTabs()}
         </div>
+      </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between mt-8">
+      {/* Footer */}
+      <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 px-8 py-4 shadow-lg">
+        <div className="container mx-auto max-w-6xl flex justify-between items-center">
           <button
             onClick={handleBack}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-8 rounded-full text-lg transition-colors"
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-8 rounded-lg text-lg transition-colors"
           >
             ← Back
           </button>
@@ -386,26 +372,29 @@ const TopicSelection = () => {
             <button
               onClick={handleNext}
               disabled={saving}
-              className={`bg-gradient-to-r from-yellow-400 to-yellow-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 
+              className={`bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-lg text-lg transition-all duration-300 
                 ${
                   saving
                     ? "opacity-50 cursor-not-allowed"
-                    : "hover:scale-105 hover:shadow-lg"
+                    : "hover:shadow-lg"
                 }`}
             >
               {saving ? (
                 <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
                   Saving...
                 </div>
               ) : (
-                `${getNextButtonText()} →`
+                `${getNextButtonText()}`
               )}
             </button>
           ) : (
-            <div className="text-gray-400 font-medium py-3 px-8">
-              Select a topic to continue
-            </div>
+            <button
+              className="bg-transparent text-gray-400 font-medium py-3 px-8 cursor-default"
+              disabled
+            >
+              {selectedDomain ? "Select a subtopic to continue" : "Select a domain to continue"}
+            </button>
           )}
         </div>
       </div>
