@@ -304,7 +304,7 @@ const PaymentPage = () => {
             if (verifyRes.ok && verifyData.success) {
               const successMessage = hasActiveSubscription
                 ? "Plan updated successfully! Welcome to your new plan!"
-                : "Payment successful! Welcome to Ultralit!";
+                : "Payment successful! Welcome to ByteDrop!";
               alert(successMessage);
               router.push("/dashboard");
             } else {

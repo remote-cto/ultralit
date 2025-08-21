@@ -27,7 +27,7 @@ const WhyUltralitSection = () => {
               <FadeInUp delay={400}>
                 <div className="bg-yellow-50 p-8 rounded-3xl border border-yellow-200 shadow-md">
                   <p className="text-3xl font-bold text-black mb-4">
-                    Ultralit keeps you ahead — without the overwhelm.
+                    ByteDrop keeps you ahead — without the overwhelm.
                   </p>
                 </div>
               </FadeInUp>

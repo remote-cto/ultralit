@@ -214,7 +214,7 @@ const AuthForm = () => {
         {/* Title */}
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold text-blue-800 mb-2">
-            <span className="text-yellow-500">Ultralit</span>
+            <span className="text-yellow-500">ByteDrop</span>
           </h1>
           <h2 className="text-2xl font-bold text-blue-800">
             {isRegister ? "Create Account" : "Welcome Back"}
