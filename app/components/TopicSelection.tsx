@@ -280,6 +280,47 @@ const TopicSelection = () => {
             })()}
           </div>
         )}
+
+        {/* Navigation Buttons - Now part of the content flow */}
+        <div className="mt-8 bg-white border-t border-gray-200 p-6 rounded-lg shadow-sm">
+          <div className="flex justify-between items-center">
+            <button
+              onClick={handleBack}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-8 rounded-lg text-lg transition-colors"
+            >
+              ← Back
+            </button>
+            
+            {selectedTopic ? (
+              <button
+                onClick={handleNext}
+                disabled={saving}
+                className={`bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-lg text-lg transition-all duration-300 
+                  ${
+                    saving
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:shadow-lg"
+                  }`}
+              >
+                {saving ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                    Saving...
+                  </div>
+                ) : (
+                  `${getNextButtonText()}`
+                )}
+              </button>
+            ) : (
+              <button
+                className="bg-transparent text-gray-400 font-medium py-3 px-8 cursor-default"
+                disabled
+              >
+                {selectedDomain ? "Select a subtopic to continue" : "Select a domain to continue"}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
@@ -287,15 +328,36 @@ const TopicSelection = () => {
   // Render other tabs (placeholder)
   const renderOtherTabs = () => {
     return (
-      <div className="text-center text-gray-500 py-20">
-        <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto flex items-center justify-center mb-4">
-          <span className="text-2xl">🚀</span>
+      <div className="space-y-8">
+        <div className="text-center text-gray-500 py-20">
+          <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto flex items-center justify-center mb-4">
+            <span className="text-2xl">🚀</span>
+          </div>
+          <h3 className="text-xl font-semibold mb-2">Coming Soon!</h3>
+          <p className="text-gray-400 mb-2">{activeTab} content is being prepared for you.</p>
+          <p className="text-sm text-gray-400">
+            Meanwhile, explore our available topics in "Learn by Domain"
+          </p>
         </div>
-        <h3 className="text-xl font-semibold mb-2">Coming Soon!</h3>
-        <p className="text-gray-400 mb-2">{activeTab} content is being prepared for you.</p>
-        <p className="text-sm text-gray-400">
-          Meanwhile, explore our available topics in "Learn by Domain"
-        </p>
+
+        {/* Navigation Buttons for other tabs too */}
+        <div className="mt-8 bg-white border-t border-gray-200 p-6 rounded-lg shadow-sm">
+          <div className="flex justify-between items-center">
+            <button
+              onClick={handleBack}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-8 rounded-lg text-lg transition-colors"
+            >
+              ← Back
+            </button>
+            
+            <button
+              className="bg-transparent text-gray-400 font-medium py-3 px-8 cursor-default"
+              disabled
+            >
+              Select a topic to continue
+            </button>
+          </div>
+        </div>
       </div>
     );
   };
@@ -304,8 +366,8 @@ const TopicSelection = () => {
     <div className="flex flex-col min-h-screen bg-gray-50" style={{ fontFamily: "'Segoe UI', sans-serif" }}>
       <Header />
       
-      {/* Main Content - with bottom padding to account for fixed navigation */}
-      <div className="flex-1 pb-24">
+      {/* Main Content - removed bottom padding since buttons are no longer fixed */}
+      <div className="flex-1">
         <div className="container mx-auto px-8 py-8 max-w-6xl">
           {/* Header */}
           <div className="text-center mb-8">
@@ -355,48 +417,7 @@ const TopicSelection = () => {
         </div>
       </div>
 
-      {/* Fixed Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 px-8 py-4 shadow-lg z-40">
-        <div className="container mx-auto max-w-6xl flex justify-between items-center">
-          <button
-            onClick={handleBack}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-8 rounded-lg text-lg transition-colors"
-          >
-            ← Back
-          </button>
-          
-          {selectedTopic ? (
-            <button
-              onClick={handleNext}
-              disabled={saving}
-              className={`bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-lg text-lg transition-all duration-300 
-                ${
-                  saving
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:shadow-lg"
-                }`}
-            >
-              {saving ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                  Saving...
-                </div>
-              ) : (
-                `${getNextButtonText()}`
-              )}
-            </button>
-          ) : (
-            <button
-              className="bg-transparent text-gray-400 font-medium py-3 px-8 cursor-default"
-              disabled
-            >
-              {selectedDomain ? "Select a subtopic to continue" : "Select a domain to continue"}
-            </button>
-          )}
-        </div>
-      </div>
-
-   
+      
       <Footer />
 
       {/* Authentication Prompt Modal */}
