@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
+import Header from "./Header";
 
 interface Topic {
   id: number;
@@ -300,6 +301,7 @@ const TopicSelection = () => {
 
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'Segoe UI', sans-serif" }}>
+      <Header/>
       <div className="container mx-auto px-8 py-8 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-8">
