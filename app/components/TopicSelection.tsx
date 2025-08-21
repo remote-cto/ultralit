@@ -91,14 +91,8 @@ const TopicSelection = () => {
     setShowAuthPrompt(false);
   };
 
-  // Handle topic selection
+  // Handle topic selection - allow selection without authentication
   const handleTopicSelect = (topicId: number) => {
-    if (!isAuthenticated) {
-      sessionStorage.setItem('pendingTopicSelection', topicId.toString());
-      sessionStorage.setItem('pendingDomainSelection', selectedDomain?.toString() || '');
-      setShowAuthPrompt(true);
-      return;
-    }
     setSelectedTopic(topicId);
     setShowAuthPrompt(false);
   };
@@ -108,14 +102,22 @@ const TopicSelection = () => {
     router.push('/auth?redirect=topic-selection');
   };
 
-  // Save topic selection and proceed
+  // Save topic selection and proceed - show auth popup if not authenticated
   const handleNext = async () => {
     if (!selectedTopic) {
       alert("Please select one topic to continue");
       return;
     }
 
-    if (!isAuthenticated || !user?.id) {
+    // Show authentication popup if user is not authenticated
+    if (!isAuthenticated) {
+      sessionStorage.setItem('pendingTopicSelection', selectedTopic.toString());
+      sessionStorage.setItem('pendingDomainSelection', selectedDomain?.toString() || '');
+      setShowAuthPrompt(true);
+      return;
+    }
+
+    if (!user?.id) {
       handleLoginRedirect();
       return;
     }
@@ -156,7 +158,7 @@ const TopicSelection = () => {
   };
 
   const getNextButtonText = () => {
-    if (!isAuthenticated) return 'Sign Up to Continue';
+    if (!isAuthenticated) return 'Confirm & Continue';
     if (saving) return 'Saving...';
     return 'Confirm & Continue';
   };
@@ -252,9 +254,6 @@ const TopicSelection = () => {
                       }`}
                   >
                     {topic.name}
-                    {!isAuthenticated && (
-                      <span className="ml-1 text-xs">(login required)</span>
-                    )}
                   </button>
                 ))}
               </div>
@@ -309,16 +308,7 @@ const TopicSelection = () => {
             Choose a topic that matches your learning goals
           </p>
           
-          {/* Auth prompt for non-authenticated users */}
-          {!isAuthenticated && (
-            <div className="mt-4 p-4 bg-blue-100 rounded-lg border border-blue-200">
-              <p className="text-blue-800 text-sm">
-                👋 Browse topics freely! Sign up when you're ready to start learning.
-              </p>
-            </div>
-          )}
-
-          {/* Welcome message for authenticated users */}
+          {/* Welcome message for authenticated users only */}
           {isAuthenticated && user?.name && (
             <div className="mt-4 p-4 bg-green-100 rounded-lg border border-green-200">
               <p className="text-green-800 text-sm">
