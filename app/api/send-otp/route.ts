@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     
     // Send OTP via email
     const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        from: `"ByteDrop" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       to: validatedData.email,
       subject: 'Your Login OTP Code',
       html: `
