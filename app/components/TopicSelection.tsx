@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import Header from "./Header";
+import Footer from "./Footer";
 
 interface Topic {
   id: number;
@@ -300,58 +301,62 @@ const TopicSelection = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'Segoe UI', sans-serif" }}>
-      <Header/>
-      <div className="container mx-auto px-8 py-8 max-w-6xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-4xl font-bold text-gray-800 mb-4">Explore Topics</h2>
-          <p className="text-lg text-gray-600 mb-4">
-            Choose a topic that matches your learning goals
-          </p>
-          
-          {/* Welcome message for authenticated users only */}
-          {isAuthenticated && user?.name && (
-            <div className="mt-4 p-4 bg-green-100 rounded-lg border border-green-200">
-              <p className="text-green-800 text-sm">
-                👋 Welcome back, {user.name}! Select a topic to continue.
-              </p>
-            </div>
-          )}
-        </div>
+    <div className="flex flex-col min-h-screen bg-gray-50" style={{ fontFamily: "'Segoe UI', sans-serif" }}>
+      <Header />
+      
+      {/* Main Content - with bottom padding to account for fixed navigation */}
+      <div className="flex-1 pb-24">
+        <div className="container mx-auto px-8 py-8 max-w-6xl">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h2 className="text-4xl font-bold text-gray-800 mb-4">Explore Topics</h2>
+            <p className="text-lg text-gray-600 mb-4">
+              Choose a topic that matches your learning goals
+            </p>
+            
+            {/* Welcome message for authenticated users only */}
+            {isAuthenticated && user?.name && (
+              <div className="mt-4 p-4 bg-green-100 rounded-lg border border-green-200">
+                <p className="text-green-800 text-sm">
+                  👋 Welcome back, {user.name}! Select a topic to continue.
+                </p>
+              </div>
+            )}
+          </div>
 
-        {/* Tabs */}
-        <div className="flex justify-center mb-8 gap-8 border-b border-gray-300 overflow-x-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              className={`pb-3 px-4 text-lg font-medium whitespace-nowrap transition-all duration-200 ${
-                activeTab === tab
-                  ? "border-b-4 border-yellow-400 text-gray-800"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-              onClick={() => {
-                setActiveTab(tab);
-                if (tab !== "Learn by Domain") {
-                  setSelectedDomain(null);
-                  setTopics([]);
-                  setSelectedTopic(null);
-                }
-              }}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+          {/* Tabs */}
+          <div className="flex justify-center mb-8 gap-8 border-b border-gray-300 overflow-x-auto">
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                className={`pb-3 px-4 text-lg font-medium whitespace-nowrap transition-all duration-200 ${
+                  activeTab === tab
+                    ? "border-b-4 border-yellow-400 text-gray-800"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => {
+                  setActiveTab(tab);
+                  if (tab !== "Learn by Domain") {
+                    setSelectedDomain(null);
+                    setTopics([]);
+                    setSelectedTopic(null);
+                  }
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
 
-        {/* Content Area */}
-        <div className="bg-white rounded-xl shadow-lg p-8 border border-yellow-200 min-h-[500px]">
-          {activeTab === "Learn by Domain" ? renderDomainView() : renderOtherTabs()}
+          {/* Content Area */}
+          <div className="bg-white rounded-xl shadow-lg p-8 border border-yellow-200 min-h-[500px]">
+            {activeTab === "Learn by Domain" ? renderDomainView() : renderOtherTabs()}
+          </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 px-8 py-4 shadow-lg">
+      {/* Fixed Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 px-8 py-4 shadow-lg z-40">
         <div className="container mx-auto max-w-6xl flex justify-between items-center">
           <button
             onClick={handleBack}
@@ -390,6 +395,9 @@ const TopicSelection = () => {
           )}
         </div>
       </div>
+
+   
+      <Footer />
 
       {/* Authentication Prompt Modal */}
       {renderAuthPrompt()}
