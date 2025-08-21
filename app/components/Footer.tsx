@@ -49,7 +49,7 @@ const Footer: React.FC<FooterProps> = ({ className = "" }) => {
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-3xl font-bold text-yellow-500">
-                  ULTRALIT
+                  ByteDrop
                 </span>
               </div>
             </div>
@@ -122,7 +122,7 @@ const Footer: React.FC<FooterProps> = ({ className = "" }) => {
           <div className="border-t border-gray-200 pt-6">
             <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
               <p className="text-gray-600 text-sm text-center md:text-left">
-                © 2025 Ultralit, All Rights Reserved.
+                © 2025 ByteDrop, All Rights Reserved.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6 text-sm">

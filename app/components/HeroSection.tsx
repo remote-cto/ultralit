@@ -23,7 +23,7 @@ const HeroSection = () => {
           <FadeInUp delay={400}>
             <h1 className="text-6xl md:text-8xl font-extrabold mb-8 leading-tight text-gray-900 drop-shadow-sm">
               <span className="bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">
-                ULTRALIT
+                ByteDrop
               </span>
               <br />
               <span className="text-gray-800 text-4xl md:text-6xl">

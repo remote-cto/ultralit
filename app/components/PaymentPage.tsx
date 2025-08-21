@@ -273,7 +273,7 @@ const PaymentPage = () => {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: data.order.amount,
         currency: data.order.currency,
-        name: "Ultralit",
+        name: "ByteDrop",
         description: hasActiveSubscription
           ? `${subscriptionStatus?.plan_name} → ${plan.name}`
           : `${plan.name} Subscription`,

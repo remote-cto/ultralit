@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ULTRALIT",
+  title: "ByteDrop",
 };
 
 export default function RootLayout({

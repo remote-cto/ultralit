@@ -94,7 +94,7 @@ const Header = () => {
               href="/" 
               className="text-3xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent hover:scale-105 transition-transform"
             >
-              ULTRALIT
+              ByteDrop
             </Link>
           </div>
 

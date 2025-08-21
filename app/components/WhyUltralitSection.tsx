@@ -10,7 +10,7 @@ const WhyUltralitSection = () => {
             <FadeInUp>
               <div className="text-center mb-16">
                 <h2 className="text-5xl md:text-6xl font-bold text-gray-800 mb-8">
-                  Why <span className="text-yellow-500">Ultralit</span>?
+                  Why <span className="text-yellow-500">ByteDrop</span>?
                 </h2>
                 <div className="w-24 h-1 bg-yellow-400 mx-auto mb-4"></div>
               </div>

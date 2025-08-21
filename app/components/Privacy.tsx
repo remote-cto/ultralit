@@ -67,7 +67,7 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
 
               <section className="mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Usage</h3>
-                <p className="text-sm text-gray-700 mb-3">UltraLIT/Remote CTO uses the collected data for various purposes:</p>
+                <p className="text-sm text-gray-700 mb-3">ByteDrop/Remote CTO uses the collected data for various purposes:</p>
                 <ul className="list-disc pl-6 text-sm text-gray-700 mb-4">
                   <li>To provide and maintain our Service</li>
                   <li>To provide customer support</li>
