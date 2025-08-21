@@ -40,7 +40,7 @@ const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => {
         <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-4 text-gray-700 leading-relaxed">
             <p className="text-sm text-gray-600 mb-6">
-              Thank you for purchasing our course, enrolling for our workshop (offline or online) and/or subscribing to our services operated by Remote CTO/UltraLIT (Registered entity: Remote CTO, thereafter referred as Remote CTO/UltraLIT).
+              Thank you for purchasing our course, enrolling for our workshop (offline or online) and/or subscribing to our services operated by Remote CTO/BYTEDROP (Registered entity: Remote CTO, thereafter referred as Remote CTO/BYTEDROP).
             </p>
 
             <div className="space-y-4">
@@ -75,7 +75,7 @@ const RefundModal: React.FC<RefundModalProps> = ({ isOpen, onClose }) => {
               <div className="bg-purple-50 border-l-4 border-purple-400 p-4 rounded-r-md">
                 <p className="font-semibold text-purple-800 mb-2">Discretionary Policy</p>
                 <p className="text-purple-700">
-                  Any batch transfers, refunds or cancellations are at the discretion of UltraLIT.
+                  Any batch transfers, refunds or cancellations are at the discretion of BYTEDROP.
                 </p>
               </div>
 
