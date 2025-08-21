@@ -36,7 +36,7 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
           <div className="p-6 max-h-[70vh] overflow-y-auto">
             <div className="prose prose-gray max-w-none">
               <p className="text-sm text-gray-600 mb-6">
-                Remote CTO ("us", "we", or "our") owns and operates the www.ultralit.live website (the "Service"). 
+                Remote CTO ("us", "we", or "our") owns and operates the www.bytedrop.in website (the "Service"). 
                 This page is to inform you of our policies regarding the collection, use, and disclosure of personal data when you use our Service.
               </p>
 
@@ -80,7 +80,7 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
               <section className="mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Retention</h3>
                 <p className="text-sm text-gray-700 mb-4">
-                  Remote CTO/UltraLIT will hold your Personal Data just for whatever length of time that is important for 
+                  Remote CTO/BYTEDROP will hold your Personal Data just for whatever length of time that is important for 
                   the reasons set out in this Privacy Policy. We will hold and utilize your Personal Data to the degree 
                   important to consent to our lawful commitments.
                 </p>
@@ -94,7 +94,7 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
                   may differ than those from your jurisdiction.
                 </p>
                 <p className="text-sm text-gray-700 mb-4">
-                  Remote CTO/UltraLIT will take all steps reasonably necessary to ensure that your data is treated securely 
+                  Remote CTO/BYTEDROP will take all steps reasonably necessary to ensure that your data is treated securely 
                   and in accordance with this Privacy Policy.
                 </p>
               </section>
@@ -113,15 +113,15 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
                 
                 <h4 className="text-md font-medium text-gray-800 mb-2">Disclosure for Law Enforcement</h4>
                 <p className="text-sm text-gray-700 mb-4">
-                  Under certain circumstances, Remote CTO/UltraLIT may be required to disclose your Personal Data if 
+                  Under certain circumstances, Remote CTO/BYTEDROP may be required to disclose your Personal Data if 
                   required to do so by law or in response to valid requests by public authorities.
                 </p>
 
                 <h4 className="text-md font-medium text-gray-800 mb-2">Legal Requirements</h4>
-                <p className="text-sm text-gray-700 mb-3">Remote CTO/UltraLIT may disclose your Personal Data in the good faith that such action is necessary:</p>
+                <p className="text-sm text-gray-700 mb-3">Remote CTO/BYTEDROP may disclose your Personal Data in the good faith that such action is necessary:</p>
                 <ul className="list-disc pl-6 text-sm text-gray-700 mb-4">
                   <li>To comply with a legal obligation</li>
-                  <li>To protect and defend the rights or property of Remote CTO/UltraLIT</li>
+                  <li>To protect and defend the rights or property of Remote CTO/BYTEDROP</li>
                   <li>To prevent or investigate possible wrongdoing in connection with the Service</li>
                   <li>To protect the personal safety of users of the Service or the public</li>
                   <li>To protect against legal liability</li>
@@ -204,7 +204,7 @@ const PrivacyModal: React.FC<PrivacyModalProps> = ({ isOpen, onClose }) => {
                   <p className="text-sm text-gray-700">Name: Nitesh Shetty</p>
                   <p className="text-sm text-gray-700">Designation: Founder</p>
                   <p className="text-sm text-gray-700">Email ID: 
-                    <a href="mailto:nitesh@ultralit.co" className="text-blue-600 hover:text-blue-800"> nitesh@ultralit.co</a>
+                    <a href="mailto:support@bytedrop.in" className="text-blue-600 hover:text-blue-800"> support@bytedrop.in</a>
                   </p>
                 </div>
               </section>

@@ -36,24 +36,24 @@ const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
             <p className="text-sm text-gray-600 mb-6">
               (Registered name: Remote CTO [
               <strong>GST – 24APJPS6706B1Z0</strong>] thereafter referred as
-              "Remote CTO/ULTRALIT")
+              "Remote CTO/BYTEDROP")
             </p>
 
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
               <p className="text-sm font-semibold text-gray-800">
                 BY VISITING{" "}
                 <a
-                  href="https://www.ultralit.co"
+                  href="https://www.bytedrop.in"
                   className="text-blue-600 hover:underline"
                 >
-                  www.ultralit.co
+                  www.bytedrop.in
                 </a>{" "}
                 OR BY PURCHASING PRODUCTS FROM{" "}
                 <a
-                  href="https://www.ultralit.co"
+                  href="https://www.bytedrop.in"
                   className="text-blue-600 hover:underline"
                 >
-                  www.ultralit.co
+                  www.bytedrop.in
                 </a>{" "}
                 OR from any of its subpages, YOU ARE CONSENTING TO OUR TERMS OF
                 SERVICE.
@@ -65,8 +65,8 @@ const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
                 GENERAL
               </h3>
               <p className="text-sm text-gray-700 leading-relaxed">
-                Thanks for choosing ULTRALIT. This site (the "Site")
-                www.ultralit.co is owned and developed by "Remote CTO"
+                Thanks for choosing BYTEDROP. This site (the "Site")
+                www.bytedrop.in is owned and developed by "Remote CTO"
                 ("COMPANY," "we" or "us"). By utilizing the Site, you consent to
                 be bound by these Terms of Service and to utilize the Site as
                 per these Terms of Service, our Privacy Policy and any extra
@@ -206,7 +206,7 @@ const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
                 INDEMNITY
               </h3>
               <p className="text-sm text-gray-700 leading-relaxed mb-3">
-                You agree to defend, indemnify, and hold harmless ULTRALIT Team,
+                You agree to defend, indemnify, and hold harmless BYTEDROP Team,
                 Remote CTO, its founder, its affiliates, officers, employees and
                 agents for all losses, costs, actions, claims, damages, expenses
                 (including legal costs) or liabilities, that arise from or
@@ -233,7 +233,7 @@ const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
                 LIMITATION OF LIABILITY
               </h3>
               <p className="text-sm text-gray-700 leading-relaxed mb-3">
-                All liability of ULTRALIT Team, Remote CTO, its founder,
+                All liability of BYTEDROP Team, Remote CTO, its founder,
                 officers, employees, and agents is expressly excluded to the
                 fullest extent permissible under law for any direct, indirect,
                 incidental, special, punitive, and consequential losses or
