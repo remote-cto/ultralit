@@ -104,21 +104,6 @@ const AuthForm = () => {
         };
         login(userData);
 
-        // ✅ Check preferences + subscription
-        const statusRes = await fetch(
-          `/api/check-user-status?user_id=${data.user?.id}`
-        );
-        const statusData = await statusRes.json();
-
-        let redirectPath = "/preferences";
-        if (
-          statusData.success &&
-          statusData.hasPreferences &&
-          statusData.hasSubscription
-        ) {
-          redirectPath = "/dashboard";
-        }
-
         // Reset form
         setFormData({
           name: "",
@@ -132,7 +117,7 @@ const AuthForm = () => {
         setShowOtpField(false);
 
         setTimeout(() => {
-          router.push(redirectPath);
+          router.push("/preferences");
         }, 1500);
       } else {
         setMessage(data.error || "Invalid OTP. Please try again.");
