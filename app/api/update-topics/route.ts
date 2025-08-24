@@ -1,3 +1,4 @@
+
 // /api/update-topics/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import pool from "../../../utils/database";
@@ -6,21 +7,19 @@ export async function POST(request: NextRequest) {
   const client = await pool.connect();
 
   try {
-    const { user_id, topic_ids } = await request.json();
+    const body = await request.json();
+    const { user_id, topic_ids } = body;
 
     // Debug logging
     console.log("Update user topics request:", {
       user_id,
-      topic_ids: Array.isArray(topic_ids) ? topic_ids.length : "invalid",
+      topic_ids,
+      topic_ids_type: typeof topic_ids,
+      topic_ids_array: Array.isArray(topic_ids),
     });
 
     // Validate required fields
-    if (
-      !user_id ||
-      !topic_ids ||
-      !Array.isArray(topic_ids) ||
-      topic_ids.length === 0
-    ) {
+    if (!user_id || !topic_ids || !Array.isArray(topic_ids) || topic_ids.length === 0) {
       console.error("Missing required fields or invalid topic_ids");
       return NextResponse.json(
         {
@@ -31,14 +30,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate topic_ids are numbers
-    const invalidTopicIds = topic_ids.filter(
-      (id) => !Number.isInteger(id) || id <= 0
-    );
+    // Convert and validate topic_ids are valid numbers
+    const validTopicIds: number[] = [];
+    const invalidTopicIds: any[] = [];
+
+    for (const id of topic_ids) {
+      const numId = Number(id);
+      if (Number.isInteger(numId) && numId > 0) {
+        validTopicIds.push(numId);
+      } else {
+        invalidTopicIds.push(id);
+      }
+    }
+
     if (invalidTopicIds.length > 0) {
       console.error("Invalid topic IDs found:", invalidTopicIds);
       return NextResponse.json(
         { success: false, error: "Invalid topic IDs provided" },
+        { status: 400 }
+      );
+    }
+
+    if (validTopicIds.length === 0) {
+      console.error("No valid topic IDs provided");
+      return NextResponse.json(
+        { success: false, error: "No valid topic IDs provided" },
         { status: 400 }
       );
     }
@@ -59,7 +75,7 @@ export async function POST(request: NextRequest) {
     console.log("Inserting new user topics");
     let insertedCount = 0;
 
-    for (const topicId of topic_ids) {
+    for (const topicId of validTopicIds) {
       const insertResult = await client.query(
         `
         INSERT INTO user_topics (user_id, topic_id)

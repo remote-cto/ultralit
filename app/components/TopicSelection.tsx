@@ -32,10 +32,10 @@ interface Category {
   is_active: boolean;
 }
 
-const TABS = ["Learn by Domain", "Learn by Topic", "MicroSkill", "Trending"];
+const TABS = ["Learn by Industry", "Learn by Topic", "MicroSkill", "Trending"];
 
 const TopicSelection = () => {
-  const [activeTab, setActiveTab] = useState("Learn by Domain");
+  const [activeTab, setActiveTab] = useState("Learn by Industry");
   const [topics, setTopics] = useState<Topic[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -48,6 +48,7 @@ const TopicSelection = () => {
   const [selectedParentCategory, setSelectedParentCategory] = useState<number | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<number | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [userIndustry, setUserIndustry] = useState<string | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,9 +57,14 @@ const TopicSelection = () => {
   // Initialize data on component mount
   useEffect(() => {
     initializeData();
-  }, []);
+    // Fetch user's industry preference if authenticated
+    if (isAuthenticated && user?.id) {
+      fetchUserIndustry();
+    }
+  }, [isAuthenticated, user]);
 
   // Handle redirect after authentication
+// Handle redirect after authentication
   useEffect(() => {
     const redirect = searchParams.get('redirect');
     if (redirect === 'topic-selection' && isAuthenticated) {
@@ -66,12 +72,18 @@ const TopicSelection = () => {
       const savedDomain = sessionStorage.getItem('pendingDomainSelection');
       
       if (savedTopic) {
-        setSelectedTopic(parseInt(savedTopic));
+        const topicId = parseInt(savedTopic, 10);
+        if (!isNaN(topicId)) {
+          setSelectedTopic(topicId);
+        }
         sessionStorage.removeItem('pendingTopicSelection');
       }
       
       if (savedDomain) {
-        setSelectedDomain(parseInt(savedDomain));
+        const domainId = parseInt(savedDomain, 10);
+        if (!isNaN(domainId)) {
+          setSelectedDomain(domainId);
+        }
         sessionStorage.removeItem('pendingDomainSelection');
       }
     }
@@ -104,6 +116,35 @@ const TopicSelection = () => {
       setLoading(false);
     }
   };
+
+  // Fetch user's industry preference
+// Fetch user's industry preference
+const fetchUserIndustry = async () => {
+  try {
+    const res = await fetch(`/api/user-preference?user_id=${user?.id}`);
+    
+    // Check if response is ok and has content
+    if (!res.ok) {
+      console.error("API response not ok:", res.status, res.statusText);
+      return;
+    }
+    
+    // Check if response has content
+    const text = await res.text();
+    if (!text) {
+      console.log("Empty response from user-preference API");
+      return;
+    }
+    
+    // Parse JSON
+    const data = JSON.parse(text);
+    if (data.success && data.preferences?.industry) {
+      setUserIndustry(data.preferences.industry);
+    }
+  } catch (error) {
+    console.error("Error fetching user industry:", error);
+  }
+};
 
   // Fetch topics based on domain selection
   const fetchTopicsByDomain = async (domainId: number) => {
@@ -192,6 +233,11 @@ const TopicSelection = () => {
     // Find subcategories for this parent
     const subs = categories.filter(cat => cat.parent_id === categoryId);
     setSubCategories(subs);
+    
+    // If no subcategories, fetch topics directly for this parent category
+    if (subs.length === 0) {
+      fetchTopicsByCategory(categoryId);
+    }
   };
 
   // Handle subcategory selection
@@ -235,6 +281,7 @@ const TopicSelection = () => {
   };
 
   // Save topic selection and proceed
+// Save topic selection and proceed
   const handleNext = async () => {
     if (!selectedTopic) {
       alert("Please select one topic to continue");
@@ -260,8 +307,10 @@ const TopicSelection = () => {
     try {
       const requestBody = {
         user_id: user.id,
-        topic_ids: [selectedTopic],
+        topic_ids: [Number(selectedTopic)], // Ensure it's a number
       };
+
+      console.log("Sending request body:", requestBody); // Debug log
 
       const res = await fetch("/api/update-topics", {
         method: "POST",
@@ -336,56 +385,104 @@ const TopicSelection = () => {
     return (
       <div className="space-y-8">
         {/* Domain Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {domains.map((domain) => (
-            <div
-              key={domain.id}
-              onClick={() => handleDomainSelect(domain.id)}
-              className={`p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg
-                ${
-                  selectedDomain === domain.id
-                    ? "border-yellow-400 bg-yellow-50 shadow-lg"
-                    : "border-gray-200 bg-white hover:border-yellow-400"
-                }`}
-            >
-              <h3 className="text-xl font-bold text-blue-700 mb-3">
-                {domain.name}
-              </h3>
-              <p className="text-gray-600">{domain.description}</p>
-            </div>
-          ))}
-        </div>
+        {!selectedDomain && (
+          <div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">Learn by Industry</h3>
+            <p className="text-gray-600 mb-6">
+              Choose your industry to see relevant topics and learning paths tailored for your sector.
+            </p>
 
-        {/* Topics Section */}
+            {/* Show user's industry preference if available */}
+            {userIndustry && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800 text-sm">
+                  <strong>Your Industry:</strong> {userIndustry}
+                  <br />
+                  <span className="text-blue-600">
+                    {domains.find(d => d.name.toLowerCase() === userIndustry.toLowerCase()) 
+                      ? "We found matching topics for your industry below!" 
+                      : "Select any industry below to explore topics."}
+                  </span>
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {domains.map((domain) => {
+                const isUserIndustry = userIndustry && domain.name.toLowerCase() === userIndustry.toLowerCase();
+                return (
+                  <div
+                    key={domain.id}
+                    onClick={() => handleDomainSelect(domain.id)}
+                    className={`p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg
+                      ${isUserIndustry 
+                        ? "border-blue-400 bg-blue-50 shadow-md" 
+                        : "border-gray-200 bg-white hover:border-yellow-400"
+                      }`}
+                  >
+                    {isUserIndustry && (
+                      <div className="mb-2">
+                        <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          Your Industry
+                        </span>
+                      </div>
+                    )}
+                    <h4 className="text-xl font-bold text-blue-700 mb-3">
+                      {domain.name}
+                    </h4>
+                    <p className="text-gray-600">{domain.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Topics Section for Selected Domain */}
         {selectedDomain && (
-          <div className="mt-8 p-6 bg-yellow-50 border border-yellow-300 border-dashed rounded-lg">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4">
-              Select a Topic:
-            </h4>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-800">
+                Topics in {domains.find(d => d.id === selectedDomain)?.name}
+              </h3>
+              <button
+                onClick={() => {
+                  setSelectedDomain(null);
+                  setSelectedTopic(null);
+                  setTopics([]);
+                }}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                ← Back to Domains
+              </button>
+            </div>
 
             {loading && renderLoading()}
 
-            {!loading && topics.length === 0 && selectedDomain && (
+            {!loading && topics.length === 0 && (
               <div className="text-center py-8">
                 <p className="text-gray-500">No topics available for this domain.</p>
               </div>
             )}
 
             {!loading && topics.length > 0 && (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {topics.map((topic) => (
-                  <button
+                  <div
                     key={topic.id}
                     onClick={() => handleTopicSelect(topic.id)}
-                    className={`inline-block mx-1 my-1 px-4 py-2 rounded-full text-sm font-medium cursor-pointer transition-all duration-200
+                    className={`p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg
                       ${
                         selectedTopic === topic.id
-                          ? "bg-yellow-400 text-black font-bold"
-                          : "bg-gray-200 text-gray-700 hover:bg-yellow-200"
+                          ? "border-yellow-400 bg-yellow-50 shadow-lg"
+                          : "border-gray-200 bg-white hover:border-yellow-400"
                       }`}
                   >
-                    {topic.name}
-                  </button>
+                    <h4 className="text-xl font-bold text-blue-700 mb-3">
+                      {topic.name}
+                    </h4>
+                    <p className="text-gray-600">{topic.description}</p>
+                  </div>
                 ))}
               </div>
             )}
@@ -404,30 +501,38 @@ const TopicSelection = () => {
       <div className="space-y-8">
         {/* Parent Categories */}
         {!selectedParentCategory && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {parentCategories.map((category) => (
-              <div
-                key={category.id}
-                onClick={() => handleParentCategorySelect(category.id)}
-                className="p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg border-gray-200 bg-white hover:border-yellow-400"
-              >
-                <h3 className="text-xl font-bold text-blue-700 mb-3">
-                  {category.name}
-                </h3>
-                <p className="text-gray-600">{category.description}</p>
-              </div>
-            ))}
+          <div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">Choose a Learning Category</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {parentCategories.map((category) => (
+                <div
+                  key={category.id}
+                  onClick={() => handleParentCategorySelect(category.id)}
+                  className="p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg border-gray-200 bg-white hover:border-yellow-400"
+                >
+                  <h4 className="text-xl font-bold text-blue-700 mb-3">
+                    {category.name}
+                  </h4>
+                  <p className="text-gray-600">{category.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {/* Subcategories */}
         {selectedParentCategory && !selectedSubCategory && subCategories.length > 0 && (
           <div className="space-y-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-800">
+                Choose a Subcategory in {parentCategories.find(c => c.id === selectedParentCategory)?.name}
+              </h3>
               <button
                 onClick={() => {
                   setSelectedParentCategory(null);
                   setSubCategories([]);
+                  setSelectedTopic(null);
+                  setTopics([]);
                 }}
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
@@ -442,9 +547,9 @@ const TopicSelection = () => {
                   onClick={() => handleSubCategorySelect(subCategory.id)}
                   className="p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg border-gray-200 bg-white hover:border-yellow-400"
                 >
-                  <h3 className="text-xl font-bold text-blue-700 mb-3">
+                  <h4 className="text-xl font-bold text-blue-700 mb-3">
                     {subCategory.name}
-                  </h3>
+                  </h4>
                   <p className="text-gray-600">{subCategory.description}</p>
                 </div>
               ))}
@@ -452,13 +557,68 @@ const TopicSelection = () => {
           </div>
         )}
 
-        {/* Topics */}
+        {/* Topics for Parent Category (when no subcategories) */}
+        {selectedParentCategory && subCategories.length === 0 && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-800">
+                Topics in {parentCategories.find(c => c.id === selectedParentCategory)?.name}
+              </h3>
+              <button
+                onClick={() => {
+                  setSelectedParentCategory(null);
+                  setSelectedTopic(null);
+                  setTopics([]);
+                }}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                ← Back to Categories
+              </button>
+            </div>
+
+            {loading && renderLoading()}
+
+            {!loading && topics.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No topics available for this category.</p>
+              </div>
+            )}
+
+            {!loading && topics.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {topics.map((topic) => (
+                  <div
+                    key={topic.id}
+                    onClick={() => handleTopicSelect(topic.id)}
+                    className={`p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg
+                      ${
+                        selectedTopic === topic.id
+                          ? "border-yellow-400 bg-yellow-50 shadow-lg"
+                          : "border-gray-200 bg-white hover:border-yellow-400"
+                      }`}
+                  >
+                    <h4 className="text-xl font-bold text-blue-700 mb-3">
+                      {topic.name}
+                    </h4>
+                    <p className="text-gray-600">{topic.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Topics for Selected Subcategory */}
         {selectedSubCategory && (
           <div className="space-y-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-800">
+                Topics in {subCategories.find(c => c.id === selectedSubCategory)?.name}
+              </h3>
               <button
                 onClick={() => {
                   setSelectedSubCategory(null);
+                  setSelectedTopic(null);
                   setTopics([]);
                 }}
                 className="text-blue-600 hover:text-blue-800 font-medium"
@@ -467,38 +627,35 @@ const TopicSelection = () => {
               </button>
             </div>
 
-            <div className="p-6 bg-yellow-50 border border-yellow-300 border-dashed rounded-lg">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">
-                Select a Topic:
-              </h4>
+            {loading && renderLoading()}
 
-              {loading && renderLoading()}
+            {!loading && topics.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No topics available for this category.</p>
+              </div>
+            )}
 
-              {!loading && topics.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No topics available for this category.</p>
-                </div>
-              )}
-
-              {!loading && topics.length > 0 && (
-                <div className="space-y-3">
-                  {topics.map((topic) => (
-                    <button
-                      key={topic.id}
-                      onClick={() => handleTopicSelect(topic.id)}
-                      className={`inline-block mx-1 my-1 px-4 py-2 rounded-full text-sm font-medium cursor-pointer transition-all duration-200
-                        ${
-                          selectedTopic === topic.id
-                            ? "bg-yellow-400 text-black font-bold"
-                            : "bg-gray-200 text-gray-700 hover:bg-yellow-200"
-                        }`}
-                    >
+            {!loading && topics.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {topics.map((topic) => (
+                  <div
+                    key={topic.id}
+                    onClick={() => handleTopicSelect(topic.id)}
+                    className={`p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg
+                      ${
+                        selectedTopic === topic.id
+                          ? "border-yellow-400 bg-yellow-50 shadow-lg"
+                          : "border-gray-200 bg-white hover:border-yellow-400"
+                      }`}
+                  >
+                    <h4 className="text-xl font-bold text-blue-700 mb-3">
                       {topic.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                    </h4>
+                    <p className="text-gray-600">{topic.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -539,9 +696,9 @@ const TopicSelection = () => {
                       : "border-gray-200 bg-white hover:border-yellow-400"
                   }`}
               >
-                <h3 className="text-xl font-bold text-blue-700 mb-3">
+                <h4 className="text-xl font-bold text-blue-700 mb-3">
                   {topic.name}
-                </h3>
+                </h4>
                 <p className="text-gray-600">{topic.description}</p>
                 {activeTab === "MicroSkill" && topic.is_microlearning && (
                   <span className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
@@ -573,7 +730,7 @@ const TopicSelection = () => {
 
     return (
       <div className="mt-6 p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
-        <h3 className="text-xl font-bold text-gray-800 mb-3">{topic.name}</h3>
+        <h4 className="text-xl font-bold text-gray-800 mb-3">{topic.name}</h4>
         <p className="text-gray-600 mb-3">
           <strong>What You'll Learn:</strong> {topic.description}
         </p>
@@ -670,7 +827,7 @@ const TopicSelection = () => {
 
           {/* Content Area */}
           <div className="bg-white rounded-xl shadow-lg p-8 border border-yellow-200 min-h-[500px]">
-            {activeTab === "Learn by Domain" && renderDomainView()}
+            {activeTab === "Learn by Industry" && renderDomainView()}
             {activeTab === "Learn by Topic" && renderTopicView()}
             {(activeTab === "MicroSkill" || activeTab === "Trending") && renderTopicsListView()}
           </div>

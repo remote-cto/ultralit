@@ -95,3 +95,63 @@ export async function POST(request: NextRequest) {
     console.log('Database connection released');
   }
 }
+
+// Add this GET method to your existing /api/user-preference/route.ts file
+
+export async function GET(request: NextRequest) {
+  const client = await pool.connect();
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const user_id = searchParams.get('user_id');
+
+    // Validate required parameter
+    if (!user_id) {
+      return NextResponse.json(
+        { success: false, error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
+    console.log("Fetching user preferences for user_id:", user_id);
+
+    // Fetch user preferences
+    const result = await client.query(
+      'SELECT role, industry, language, preferred_mode, frequency FROM user_preferences WHERE user_id = $1',
+      [user_id]
+    );
+
+    if (result.rows.length === 0) {
+      return NextResponse.json({
+        success: true,
+        preferences: null,
+        message: 'No preferences found for this user'
+      });
+    }
+
+    const preferences = result.rows[0];
+    console.log("User preferences found:", preferences);
+
+    return NextResponse.json({
+      success: true,
+      preferences
+    });
+
+  } catch (error) {
+    console.error('Error fetching user preferences:', error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to fetch user preferences',
+        details: process.env.NODE_ENV === 'development' 
+          ? (error as Error).message 
+          : undefined,
+      },
+      { status: 500 }
+    );
+  } finally {
+    client.release();
+    console.log('Database connection released');
+  }
+}
