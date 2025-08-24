@@ -83,30 +83,46 @@ const TopicSelection = () => {
     }
   }, [searchParams, isAuthenticated]);
 
-  const initializeData = async () => {
-    setLoading(true);
-    try {
-      const [domainsRes, categoriesRes] = await Promise.all([
-        fetch("/api/fetch-domains"),
-        fetch("/api/fetch-categories")
-      ]);
+// Add this to your initializeData function in TopicSelection component
+const initializeData = async () => {
+  setLoading(true);
+  try {
+    console.log("Starting to fetch domains and categories...");
+    
+    const [domainsRes, categoriesRes] = await Promise.all([
+      fetch("/api/fetch-domains"),
+      fetch("/api/fetch-categories")
+    ]);
 
-      const domainsData = await domainsRes.json();
-      const categoriesData = await categoriesRes.json();
+    console.log("Domains response status:", domainsRes.status);
+    console.log("Categories response status:", categoriesRes.status);
 
-      if (domainsData.success) setDomains(domainsData.domains || []);
-      
-      if (categoriesData.success) {
-        const allCategories = categoriesData.categories || [];
-        setCategories(allCategories);
-        setParentCategories(allCategories.filter((cat: Category) => cat.parent_id === null));
-      }
-    } catch (error) {
-      console.error("Error initializing data:", error);
-    } finally {
-      setLoading(false);
+    const domainsData = await domainsRes.json();
+    const categoriesData = await categoriesRes.json();
+
+    console.log("Domains data:", domainsData);
+    console.log("Categories data:", categoriesData);
+
+    if (domainsData.success) {
+      console.log("Setting domains:", domainsData.domains);
+      setDomains(domainsData.domains || []);
+    } else {
+      console.error("Failed to fetch domains:", domainsData.error);
     }
-  };
+    
+    if (categoriesData.success) {
+      const allCategories = categoriesData.categories || [];
+      setCategories(allCategories);
+      setParentCategories(allCategories.filter((cat: Category) => cat.parent_id === null));
+    } else {
+      console.error("Failed to fetch categories:", categoriesData.error);
+    }
+  } catch (error) {
+    console.error("Error initializing data:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchUserIndustry = async () => {
     try {

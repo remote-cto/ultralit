@@ -1,4 +1,4 @@
-// /api/fetch-categories/route.ts
+// /api/fetch-domains/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '../../../utils/database';
 
@@ -7,32 +7,32 @@ export async function GET() {
 
   try {
     // Debug logging
-    console.log("Fetching categories request");
+    console.log("Fetching domains request");
 
     const query = `
-      SELECT id, name, description, parent_id, is_active
-      FROM categories 
-      WHERE is_active = true
-      ORDER BY parent_id NULLS FIRST, name ASC
+      SELECT id, name, description, is_active
+      FROM domains 
+      WHERE (is_active = true OR is_active IS NULL)
+      ORDER BY name ASC
     `;
     
-    console.log("Executing categories query");
+    console.log("Executing domains query");
     const result = await client.query(query);
     
-    console.log(`Successfully fetched ${result.rows.length} categories`);
+    console.log(`Successfully fetched ${result.rows.length} domains`);
 
     return NextResponse.json({
       success: true,
-      categories: result.rows,
+      domains: result.rows,
     });
 
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    console.error('Error fetching domains:', error);
     
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch categories',
+        error: 'Failed to fetch domains',
         details: process.env.NODE_ENV === 'development' 
           ? (error as Error).message 
           : undefined,
