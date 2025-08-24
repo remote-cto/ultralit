@@ -249,15 +249,15 @@ const TopicSelection = () => {
 
   const LoadingSpinner = () => (
     <div className="text-center py-8">
-      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mb-4"></div>
-      <p className="text-gray-500">Loading...</p>
+      <div className="inline-block animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-yellow-500 mb-4"></div>
+      <p className="text-gray-500 text-sm sm:text-base">Loading...</p>
     </div>
   );
 
   const CategoryCard = ({ item, onClick, isHighlighted = false }: any) => (
     <div
       onClick={onClick}
-      className={`p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg
+      className={`p-4 sm:p-6 border-2 rounded-lg sm:rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg
         ${isHighlighted 
           ? "border-blue-400 bg-blue-50 shadow-md" 
           : "border-gray-200 bg-white hover:border-yellow-400"
@@ -270,19 +270,19 @@ const TopicSelection = () => {
           </span>
         </div>
       )}
-      <h4 className="text-xl font-bold text-blue-700 mb-3">{item.name}</h4>
-      <p className="text-gray-600">{item.description}</p>
+      <h4 className="text-lg sm:text-xl font-bold text-blue-700 mb-2 sm:mb-3">{item.name}</h4>
+      <p className="text-gray-600 text-sm sm:text-base">{item.description}</p>
     </div>
   );
 
   const TopicsDisplay = ({ title, backAction }: { title: string; backAction?: () => void }) => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold text-gray-800">{title}</h3>
+        <h3 className="text-xl sm:text-2xl font-bold text-gray-800 flex-1 mr-2">{title}</h3>
         {backAction && (
           <button
             onClick={backAction}
-            className="text-blue-600 hover:text-blue-800 font-medium"
+            className="text-blue-600 hover:text-blue-800 font-medium text-sm sm:text-base whitespace-nowrap"
           >
             ← Back
           </button>
@@ -298,14 +298,14 @@ const TopicSelection = () => {
       )}
 
       {!loading && topics.length > 0 && (
-        <div className="space-y-6">
-          {/* Horizontal Topics Display */}
-          <div className="flex flex-wrap gap-3">
+        <div className="space-y-4 sm:space-y-6">
+          {/* Horizontal Topics Display - Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
             {topics.map((topic) => (
               <button
                 key={topic.id}
                 onClick={() => handleTopicSelect(topic.id)}
-                className={`px-6 py-3 rounded-full font-medium transition-all duration-200 cursor-pointer text-sm
+                className={`px-3 py-2 sm:px-4 sm:py-3 rounded-full font-medium transition-all duration-200 cursor-pointer text-xs sm:text-sm text-center
                   ${selectedTopic === topic.id
                     ? "bg-yellow-400 text-black shadow-lg scale-105"
                     : "bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:shadow-md hover:scale-102"
@@ -318,20 +318,20 @@ const TopicSelection = () => {
 
           {/* Selected Topic Details */}
           {selectedTopic && (
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-xl p-6 shadow-lg">
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg">
               <div className="flex items-start justify-between mb-4">
-                <h4 className="text-2xl font-bold text-gray-800">
+                <h4 className="text-lg sm:text-2xl font-bold text-gray-800 flex-1 mr-2">
                   {topics.find((t) => t.id === selectedTopic)?.name}
                 </h4>
-                <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
                   Selected
                 </span>
               </div>
               <div className="text-gray-700 mb-4">
-                <p className="mb-2">
+                <p className="mb-2 text-sm sm:text-base">
                   <strong className="text-gray-800">What You'll Learn:</strong>
                 </p>
-                <p className="leading-relaxed">
+                <p className="leading-relaxed text-sm sm:text-base">
                   {topics.find((t) => t.id === selectedTopic)?.description}
                 </p>
               </div>
@@ -339,12 +339,12 @@ const TopicSelection = () => {
               {/* Badges for special topics */}
               <div className="flex flex-wrap gap-2">
                 {topics.find((t) => t.id === selectedTopic)?.is_microlearning && (
-                  <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
+                  <span className="inline-block px-2 py-1 sm:px-3 bg-green-100 text-green-800 text-xs sm:text-sm rounded-full">
                     🎯 Micro Learning
                   </span>
                 )}
                 {topics.find((t) => t.id === selectedTopic)?.is_trending && (
-                  <span className="inline-block px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full">
+                  <span className="inline-block px-2 py-1 sm:px-3 bg-red-100 text-red-800 text-xs sm:text-sm rounded-full">
                     🔥 Trending Now
                   </span>
                 )}
@@ -357,17 +357,17 @@ const TopicSelection = () => {
   );
 
   const renderDomainView = () => (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {!selectedDomain ? (
         <div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-6">Learn by Industry</h3>
-          <p className="text-gray-600 mb-6">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Learn by Industry</h3>
+          <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
             Choose your industry to see relevant topics and learning paths tailored for your sector.
           </p>
 
           {userIndustry && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-blue-800 text-sm">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800 text-xs sm:text-sm">
                 <strong>Your Industry:</strong> {userIndustry}
                 <br />
                 <span className="text-blue-600">
@@ -380,7 +380,7 @@ const TopicSelection = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {domains.map((domain) => (
               <CategoryCard
                 key={domain.id}
@@ -405,11 +405,11 @@ const TopicSelection = () => {
   );
 
   const renderTopicView = () => (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {!selectedParentCategory ? (
         <div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-6">Choose a Learning Category</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Choose a Learning Category</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {parentCategories.map((category) => (
               <CategoryCard
                 key={category.id}
@@ -420,9 +420,9 @@ const TopicSelection = () => {
           </div>
         </div>
       ) : !selectedSubCategory && subCategories.length > 0 ? (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-gray-800">
+            <h3 className="text-lg sm:text-2xl font-bold text-gray-800 flex-1 mr-2">
               Choose a Subcategory in {parentCategories.find(c => c.id === selectedParentCategory)?.name}
             </h3>
             <button
@@ -432,12 +432,12 @@ const TopicSelection = () => {
                 setSelectedTopic(null);
                 setTopics([]);
               }}
-              className="text-blue-600 hover:text-blue-800 font-medium"
+              className="text-blue-600 hover:text-blue-800 font-medium text-sm sm:text-base whitespace-nowrap"
             >
               ← Back to Categories
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {subCategories.map((subCategory) => (
               <CategoryCard
                 key={subCategory.id}
@@ -470,27 +470,27 @@ const TopicSelection = () => {
   );
 
   const renderTopicsListView = () => (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {loading && <LoadingSpinner />}
 
       {!loading && topics.length === 0 && (
-        <div className="text-center text-gray-500 py-20">
-          <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto flex items-center justify-center mb-4">
-            <span className="text-2xl">📚</span>
+        <div className="text-center text-gray-500 py-12 sm:py-20">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full mx-auto flex items-center justify-center mb-4">
+            <span className="text-xl sm:text-2xl">📚</span>
           </div>
-          <h3 className="text-xl font-semibold mb-2">No Topics Available</h3>
-          <p className="text-gray-400">{activeTab} topics are being prepared for you.</p>
+          <h3 className="text-lg sm:text-xl font-semibold mb-2">No Topics Available</h3>
+          <p className="text-gray-400 text-sm sm:text-base">{activeTab} topics are being prepared for you.</p>
         </div>
       )}
 
       {!loading && topics.length > 0 && (
-        <div className="space-y-6">
-          <div className="flex flex-wrap gap-3">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
             {topics.map((topic) => (
               <button
                 key={topic.id}
                 onClick={() => handleTopicSelect(topic.id)}
-                className={`px-6 py-3 rounded-full font-medium transition-all duration-200 cursor-pointer
+                className={`px-3 py-2 sm:px-4 sm:py-3 rounded-full font-medium transition-all duration-200 cursor-pointer text-xs sm:text-sm text-center
                   ${selectedTopic === topic.id
                     ? "bg-yellow-400 text-black shadow-lg scale-105"
                     : "bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:shadow-md hover:scale-102"
@@ -502,31 +502,31 @@ const TopicSelection = () => {
           </div>
 
           {selectedTopic && (
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-xl p-6 shadow-lg">
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg">
               <div className="flex items-start justify-between mb-4">
-                <h4 className="text-2xl font-bold text-gray-800">
+                <h4 className="text-lg sm:text-2xl font-bold text-gray-800 flex-1 mr-2">
                   {topics.find((t) => t.id === selectedTopic)?.name}
                 </h4>
-                <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
                   Selected
                 </span>
               </div>
               <div className="text-gray-700 mb-4">
-                <p className="mb-2">
+                <p className="mb-2 text-sm sm:text-base">
                   <strong className="text-gray-800">What You'll Learn:</strong>
                 </p>
-                <p className="leading-relaxed">
+                <p className="leading-relaxed text-sm sm:text-base">
                   {topics.find((t) => t.id === selectedTopic)?.description}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 {topics.find((t) => t.id === selectedTopic)?.is_microlearning && (
-                  <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
+                  <span className="inline-block px-2 py-1 sm:px-3 bg-green-100 text-green-800 text-xs sm:text-sm rounded-full">
                     🎯 Micro Learning
                   </span>
                 )}
                 {topics.find((t) => t.id === selectedTopic)?.is_trending && (
-                  <span className="inline-block px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full">
+                  <span className="inline-block px-2 py-1 sm:px-3 bg-red-100 text-red-800 text-xs sm:text-sm rounded-full">
                     🔥 Trending Now
                   </span>
                 )}
@@ -539,11 +539,11 @@ const TopicSelection = () => {
   );
 
   const NavigationButtons = () => (
-    <div className="mt-8 bg-gradient-to-r from-gray-50 to-yellow-50 border border-yellow-200 p-6 rounded-xl shadow-sm">
-      <div className="flex justify-between items-center">
+    <div className="mt-6 sm:mt-8 bg-gradient-to-r from-gray-50 to-yellow-50 border border-yellow-200 p-4 sm:p-6 rounded-lg sm:rounded-xl shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <button
           onClick={() => router.push("/")}
-          className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-8 rounded-lg text-lg transition-colors"
+          className="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 sm:py-3 px-6 sm:px-8 rounded-lg text-base sm:text-lg transition-colors"
         >
           ← Back
         </button>
@@ -552,11 +552,11 @@ const TopicSelection = () => {
           <button
             onClick={handleNext}
             disabled={saving}
-            className={`bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-8 rounded-lg text-lg transition-all duration-300 
+            className={`w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 sm:py-3 px-6 sm:px-8 rounded-lg text-base sm:text-lg transition-all duration-300 
               ${saving ? "opacity-50 cursor-not-allowed" : "hover:shadow-lg hover:scale-105"}`}
           >
             {saving ? (
-              <div className="flex items-center">
+              <div className="flex items-center justify-center">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
                 Saving...
               </div>
@@ -565,7 +565,7 @@ const TopicSelection = () => {
             )}
           </button>
         ) : (
-          <button className="bg-transparent text-gray-400 font-medium py-3 px-8 cursor-default" disabled>
+          <button className="w-full sm:w-auto bg-transparent text-gray-400 font-medium py-2 sm:py-3 px-6 sm:px-8 cursor-default text-sm sm:text-base" disabled>
             Select a topic to continue
           </button>
         )}
@@ -577,22 +577,22 @@ const TopicSelection = () => {
     if (!showAuthPrompt) return null;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-xl p-8 max-w-md mx-4 shadow-2xl">
-          <h3 className="text-2xl font-bold text-blue-800 mb-4">Ready to Get Started?</h3>
-          <p className="text-gray-600 mb-6">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg sm:rounded-xl p-6 sm:p-8 max-w-md w-full mx-4 shadow-2xl">
+          <h3 className="text-xl sm:text-2xl font-bold text-blue-800 mb-4">Ready to Get Started?</h3>
+          <p className="text-gray-600 mb-6 text-sm sm:text-base">
             Sign up or log in to select this topic and continue your learning journey!
           </p>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <button
               onClick={() => setShowAuthPrompt(false)}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg transition-colors"
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
             >
               Continue Browsing
             </button>
             <button
               onClick={handleLoginRedirect}
-              className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
             >
               Sign Up / Login
             </button>
@@ -607,42 +607,44 @@ const TopicSelection = () => {
       <Header />
 
       <div className="flex-1">
-        <div className="container mx-auto px-8 py-8 max-w-6xl">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-6xl">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h2 className="text-4xl font-bold text-gray-800 mb-4">Explore Topics</h2>
-            <p className="text-lg text-gray-600 mb-4">
+          <div className="text-center mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2 sm:mb-4">Explore Topics</h2>
+            <p className="text-base sm:text-lg text-gray-600 mb-2 sm:mb-4">
               Choose a topic that matches your learning goals
             </p>
 
             {isAuthenticated && user?.name && (
-              <div className="mt-4 p-4 bg-green-100 rounded-lg border border-green-200">
-                <p className="text-green-800 text-sm">
+              <div className="mt-4 p-3 sm:p-4 bg-green-100 rounded-lg border border-green-200">
+                <p className="text-green-800 text-xs sm:text-sm">
                   Welcome back, {user.name}! Select a topic to continue.
                 </p>
               </div>
             )}
           </div>
 
-          {/* Tabs */}
-          <div className="flex justify-center mb-8 gap-8 border-b border-gray-300 overflow-x-auto">
-            {TABS.map((tab) => (
-              <button
-                key={tab}
-                className={`pb-3 px-4 text-lg font-medium whitespace-nowrap transition-all duration-200 ${
-                  activeTab === tab
-                    ? "border-b-4 border-yellow-400 text-gray-800"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-                onClick={() => handleTabChange(tab)}
-              >
-                {tab}
-              </button>
-            ))}
+          {/* Tabs - Horizontal scrollable on mobile */}
+          <div className="mb-6 sm:mb-8 border-b border-gray-300">
+            <div className="flex justify-start sm:justify-center gap-2 sm:gap-4 lg:gap-8 overflow-x-auto pb-3">
+              {TABS.map((tab) => (
+                <button
+                  key={tab}
+                  className={`pb-2 sm:pb-3 px-2 sm:px-4 text-sm sm:text-base lg:text-lg font-medium whitespace-nowrap transition-all duration-200 min-w-max ${
+                    activeTab === tab
+                      ? "border-b-2 sm:border-b-4 border-yellow-400 text-gray-800"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                  onClick={() => handleTabChange(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Content Area */}
-          <div className="bg-white rounded-xl shadow-lg p-8 border border-yellow-200 min-h-[500px]">
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 border border-yellow-200 min-h-[400px] sm:min-h-[500px]">
             {activeTab === "Learn by Industry" && renderDomainView()}
             {activeTab === "Learn by Topic" && renderTopicView()}
             {(activeTab === "MicroSkill" || activeTab === "Trending") && renderTopicsListView()}
