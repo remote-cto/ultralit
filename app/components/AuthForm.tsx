@@ -1,9 +1,11 @@
 //app/components/AuthForm.tsx
+//app/components/AuthForm.tsx
 
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
+import { redirectUserBasedOnSetup } from "../../utils/authUtils";
 
 const AuthForm = () => {
   const [isRegister, setIsRegister] = useState(false);
@@ -29,6 +31,29 @@ const AuthForm = () => {
       ...prev,
       [name]: value,
     }));
+  };
+
+  // Function to check if user preferences exist
+  const handleUserRedirection = async (userId: string) => {
+    try {
+      setMessage("Checking your profile...");
+      const { redirectPath, setupStatus } = await redirectUserBasedOnSetup(userId, router);
+      
+      if (redirectPath === "/dashboard") {
+        setMessage("Welcome back! Redirecting to dashboard...");
+      } else if (redirectPath === "/topic-selection") {
+        setMessage("Almost done! Let's select your topics...");
+      } else {
+        setMessage("Setting up your profile...");
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error during user redirection:", error);
+      setMessage("Setting up your profile...");
+      router.push("/preferences");
+      return false;
+    }
   };
 
   const handleSendOtp = async () => {
@@ -91,7 +116,7 @@ const AuthForm = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage("Login successful! Redirecting...");
+        setMessage("Login successful!");
 
         const userData = {
           id: data.user?.id,
@@ -116,9 +141,10 @@ const AuthForm = () => {
         setOtp("");
         setShowOtpField(false);
 
-        setTimeout(() => {
-          router.push("/preferences");
-        }, 1500);
+        // Handle user redirection based on their setup status
+        setTimeout(async () => {
+          await handleUserRedirection(userData.id);
+        }, 1000);
       } else {
         setMessage(data.error || "Invalid OTP. Please try again.");
       }
@@ -217,7 +243,10 @@ const AuthForm = () => {
             className={`mb-4 p-3 rounded-lg text-center text-sm ${
               message.includes("successful") ||
               message.includes("sent") ||
-              message.includes("Redirecting")
+              message.includes("Redirecting") ||
+              message.includes("Welcome back") ||
+              message.includes("Checking") ||
+              message.includes("Setting up")
                 ? "bg-green-100 text-green-700 border border-green-300"
                 : "bg-red-100 text-red-700 border border-red-300"
             }`}

@@ -1,4 +1,5 @@
 //app/components/userpreferences
+//app/components/userpreferences
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -6,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext"; // Import the auth context
 
 const UserPreferences = () => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [preferences, setPreferences] = useState({
     role: "",
@@ -47,12 +48,52 @@ const UserPreferences = () => {
   const modeOptions = ["Whatsapp", "Email"];
   const frequencyOptions = ["Weekly", "Bi-Weekly"];
 
+  // Function to fetch existing user preferences
+  const fetchUserPreferences = async () => {
+    if (!user?.id) return;
+
+    try {
+      const response = await fetch(`/api/get-user-preferences?user_id=${user.id}`);
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // User has existing preferences, populate form
+        const existingPrefs = data.preferences;
+        setPreferences({
+          role: existingPrefs.role || "",
+          industry: existingPrefs.industry || "",
+          language: existingPrefs.language || "English",
+          preferredMode: existingPrefs.preferred_mode || "Whatsapp",
+          frequency: existingPrefs.frequency || "Weekly",
+          otherIndustry: existingPrefs.industry === "Others" || 
+                        !industryOptions.includes(existingPrefs.industry) 
+                        ? existingPrefs.industry 
+                        : "",
+        });
+        
+        // If user has complete preferences and topics, redirect to dashboard
+        if (existingPrefs.topics && existingPrefs.topics.length > 0) {
+          console.log("User has complete setup, redirecting to dashboard");
+          router.push("/dashboard");
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user preferences:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!isAuthenticated || !user) {
       router.push("/auth"); // Redirect to login if not authenticated
       return;
     }
+    
+    // Fetch existing preferences
+    fetchUserPreferences();
   }, [isAuthenticated, user, router]);
 
   // Handle industry change
@@ -137,13 +178,15 @@ const UserPreferences = () => {
     }
   };
 
-  // Show loading screen while checking authentication
-  if (!isAuthenticated || !user) {
+  // Show loading screen while checking authentication or fetching preferences
+  if (!isAuthenticated || !user || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking authentication...</p>
+          <p className="text-gray-600">
+            {loading ? "Loading your preferences..." : "Checking authentication..."}
+          </p>
         </div>
       </div>
     );

@@ -16,6 +16,8 @@ import {
   Menu,
   ChevronLeft,
 } from "lucide-react";
+import RouteGuard from "../components/RouteGuard";
+
 
 // Define types
 interface Subscription {
@@ -228,6 +230,7 @@ export default function Dashboard() {
   }
 
   const renderSubscriptions = () => (
+
     <div className="space-y-4 sm:space-y-6">
       <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
         <BookOpen className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
@@ -600,6 +603,8 @@ export default function Dashboard() {
   };
 
   return (
+        <RouteGuard requiresAuth={true} requiresSetup={false}>
+
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-yellow-100 flex relative">
       {/* Mobile Overlay */}
       {isMobile && sidebarOpen && (
@@ -746,5 +751,6 @@ export default function Dashboard() {
         <div className="p-4 sm:p-6">{renderContent()}</div>
       </div>
     </div>
+    </RouteGuard>
   );
 }
