@@ -1,17 +1,44 @@
-//app/api/activate-trial/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import pool from "../../../utils/database";
+
+// Define interfaces for type safety
+interface UserPreferences {
+  role?: string;
+  industry?: string;
+  language?: string;
+  preferred_mode?: string;
+  frequency?: string;
+  topics?: Array<{
+    id?: number;
+    topic_id?: number;
+    [key: string]: any;
+  }>;
+}
+
+interface RequestBody {
+  user_id: string | number;
+  plan_name: string;
+  preferences?: UserPreferences;
+}
+
+interface DatabaseRow {
+  id: number;
+  plan_name?: string;
+  status?: string;
+  start_date?: string;
+  [key: string]: any;
+}
 
 export async function POST(req: NextRequest) {
   const client = await pool.connect();
 
   try {
+    const body: RequestBody = await req.json();
     const {
       user_id,
       plan_name,
       preferences,
-    } = await req.json();
+    } = body;
 
     // Debug logging
     console.log("Free trial activation request:", {
@@ -20,11 +47,11 @@ export async function POST(req: NextRequest) {
       preferences,
     });
 
-    // Validate required fields
-    if (!user_id || !plan_name) {
-      console.error("Missing required fields");
+    // Validate required fields with proper type checking
+    if (!user_id || !plan_name || typeof plan_name !== 'string') {
+      console.error("Missing or invalid required fields");
       return NextResponse.json(
-        { success: false, error: "Missing required fields" },
+        { success: false, error: "Missing or invalid required fields" },
         { status: 400 }
       );
     }
@@ -50,12 +77,13 @@ export async function POST(req: NextRequest) {
 
     if (existingSubscription.rows.length > 0) {
       await client.query("ROLLBACK");
-      console.log("User already has active subscription:", existingSubscription.rows[0]);
+      const currentSubscription = existingSubscription.rows[0] as DatabaseRow;
+      console.log("User already has active subscription:", currentSubscription);
       return NextResponse.json(
         { 
           success: false, 
           error: "You already have an active subscription",
-          current_plan: existingSubscription.rows[0].plan_name
+          current_plan: currentSubscription.plan_name
         },
         { status: 400 }
       );
@@ -102,7 +130,8 @@ export async function POST(req: NextRequest) {
       "free_trial", // payment_method
     ]);
 
-    console.log("Trial payment record inserted with ID:", trialResult.rows[0].id);
+    const trialPaymentId = (trialResult.rows[0] as DatabaseRow).id;
+    console.log("Trial payment record inserted with ID:", trialPaymentId);
 
     // Create user subscription for free trial
     const subscriptionInsert = `
@@ -125,21 +154,19 @@ export async function POST(req: NextRequest) {
       "INR", // currency
     ]);
 
-    console.log(
-      "Free trial subscription created with ID:",
-      subscriptionResult.rows[0].id
-    );
+    const subscriptionId = (subscriptionResult.rows[0] as DatabaseRow).id;
+    console.log("Free trial subscription created with ID:", subscriptionId);
 
     // Update payment record with subscription ID
     await client.query(
       "UPDATE payments SET subscription_id = $1 WHERE id = $2",
-      [subscriptionResult.rows[0].id, trialResult.rows[0].id]
+      [subscriptionId, trialPaymentId]
     );
 
     console.log("Payment record updated with subscription ID");
 
     // Store user preferences if provided
-    if (preferences && Object.keys(preferences).length > 0) {
+    if (preferences && typeof preferences === 'object' && Object.keys(preferences).length > 0) {
       const preferencesInsert = `
         INSERT INTO user_preferences (
           user_id, role, industry, language, preferred_mode, frequency
@@ -171,10 +198,59 @@ export async function POST(req: NextRequest) {
       `INSERT INTO subscription_history (
         subscription_id, user_id, action, new_plan, amount, reason
       ) VALUES ($1, $2, 'new_subscription', $3, $4, 'Free trial activation')`,
-      [subscriptionResult.rows[0].id, user_id, plan_name, 0]
+      [subscriptionId, user_id, plan_name, 0]
     );
 
     console.log("Subscription history record created");
+
+    // Insert entries into user_content_delivery table for selected topics only
+    if (preferences?.topics && Array.isArray(preferences.topics) && preferences.topics.length > 0) {
+      console.log("Setting up content delivery schedule for selected topics...");
+      
+      // Extract topic IDs from user's selected topics with proper type checking
+      const selectedTopicIds = preferences.topics
+        .map(topic => {
+          if (typeof topic === 'object' && topic !== null) {
+            return topic.id || topic.topic_id;
+          }
+          return null;
+        })
+        .filter((id): id is number => typeof id === 'number' && !isNaN(id)); // Type guard
+      
+      if (selectedTopicIds.length > 0) {
+        // Prepare batch insert for user_content_delivery with proper typing
+        const contentDeliveryInserts: Array<[string | number, number, number, boolean]> = selectedTopicIds.map(topicId => [
+          user_id,
+          topicId,
+          1, // day_number starts at 1
+          false // is_sent = false
+        ]);
+
+        // Create parameterized query with proper indexing
+        const valuesPlaceholders: string[] = [];
+        const flattenedValues: (string | number | boolean)[] = [];
+        
+        contentDeliveryInserts.forEach((values, index) => {
+          const baseIndex = index * 4;
+          valuesPlaceholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4})`);
+          flattenedValues.push(...values);
+        });
+
+        const contentDeliveryInsert = `
+          INSERT INTO user_content_delivery 
+          (user_id, topic_id, day_number, is_sent)
+          VALUES ${valuesPlaceholders.join(', ')}
+        `;
+
+        await client.query(contentDeliveryInsert, flattenedValues);
+        
+        console.log(`Content delivery schedule created for ${selectedTopicIds.length} selected topics`);
+      } else {
+        console.log("No valid topic IDs found in user preferences");
+      }
+    } else {
+      console.log("No topics selected in user preferences - skipping content delivery setup");
+    }
 
     // Commit transaction
     await client.query("COMMIT");
@@ -185,8 +261,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      payment_id: trialResult.rows[0].id,
-      subscription_id: subscriptionResult.rows[0].id,
+      payment_id: trialPaymentId,
+      subscription_id: subscriptionId,
       message: "Free trial activated successfully",
       trial_expires_at: trialExpiresAt.toISOString(),
       plan_details: {
@@ -207,14 +283,14 @@ export async function POST(req: NextRequest) {
       console.error("Rollback error:", rollbackError);
     }
 
+    // Proper error handling with type checking
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    
     return NextResponse.json(
       {
         success: false,
         error: "Free trial activation failed",
-        details:
-          process.env.NODE_ENV === "development"
-            ? (error as Error).message
-            : undefined,
+        details: process.env.NODE_ENV === "development" ? errorMessage : undefined,
       },
       { status: 500 }
     );

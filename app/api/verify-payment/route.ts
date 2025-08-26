@@ -3,10 +3,48 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import pool from "../../../utils/database";
 
-export async function POST(req: NextRequest) {
-  const client = await pool.connect();
+// Type definitions
+interface PaymentVerificationRequest {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+  user_id: string;
+  plan_name: string;
+  amount: number;
+  preferences?: UserPreferences;
+  currency?: string;
+  is_upgrade?: boolean;
+  previous_plan?: string | null;
+}
+
+interface UserPreferences {
+  role?: string;
+  industry?: string;
+  language?: string;
+  preferred_mode?: string;
+  frequency?: string;
+  topics?: Array<{
+    id?: number;
+    topic_id?: number;
+  }>;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface DatabaseClient {
+  query: (text: string, params?: any[]) => Promise<{ rows: any[] }>;
+  release: () => void;
+}
+
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  const client = await pool.connect() as DatabaseClient;
 
   try {
+    const body = await req.json() as PaymentVerificationRequest;
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -18,7 +56,7 @@ export async function POST(req: NextRequest) {
       currency = "INR",
       is_upgrade = false,
       previous_plan = null,
-    } = await req.json();
+    } = body;
 
     // Debug logging
     console.log("Payment verification request:", {
@@ -33,7 +71,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Validate required fields
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !user_id || !plan_name || !amount) {
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !user_id || !plan_name || typeof amount !== 'number') {
       console.error("Missing required payment verification fields");
       return NextResponse.json(
         { success: false, error: "Missing required payment verification fields" },
@@ -50,14 +88,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify signature
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const signatureBody = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(body.toString())
+      .update(signatureBody.toString())
       .digest("hex");
 
     console.log("Signature verification:", {
-      body,
+      body: signatureBody,
       expectedSignature: expectedSignature.substring(0, 10) + "...",
       receivedSignature: razorpay_signature.substring(0, 10) + "...",
       match: expectedSignature === razorpay_signature,
@@ -93,7 +131,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const user = userResult.rows[0];
+      const user = userResult.rows[0] as User;
       console.log("User found:", user.email);
 
       // Check if payment already exists (prevent duplicate processing)
@@ -117,7 +155,7 @@ export async function POST(req: NextRequest) {
         [user_id]
       );
 
-      let subscriptionId;
+      let subscriptionId: number;
       const now = new Date();
       const nextRenewalDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
 
@@ -243,6 +281,52 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Insert entries into user_content_delivery table
+      // Only for new subscriptions (not upgrades) to avoid duplicates
+      if (!is_upgrade) {
+        if (preferences?.topics && Array.isArray(preferences.topics) && preferences.topics.length > 0) {
+          console.log("Setting up content delivery schedule for selected topics...");
+          
+          // Extract topic IDs from user's selected topics
+          const selectedTopicIds = preferences.topics
+            .map(topic => topic.id || topic.topic_id)
+            .filter((id): id is number => typeof id === 'number'); // Type guard to filter out non-numbers
+          
+          if (selectedTopicIds.length > 0) {
+            // Prepare batch insert for user_content_delivery
+            const contentDeliveryInserts = selectedTopicIds.map(topicId => [
+              user_id,
+              topicId,
+              1, // day_number starts at 1
+              false // is_sent = false
+            ]);
+
+            // Batch insert
+            const valuesPlaceholder = contentDeliveryInserts
+              .map((_, index) => `($${index * 4 + 1}, $${index * 4 + 2}, $${index * 4 + 3}, $${index * 4 + 4})`)
+              .join(', ');
+
+            const flattenedValues = contentDeliveryInserts.flat();
+
+            const contentDeliveryInsert = `
+              INSERT INTO user_content_delivery 
+              (user_id, topic_id, day_number, is_sent)
+              VALUES ${valuesPlaceholder}
+            `;
+
+            await client.query(contentDeliveryInsert, flattenedValues);
+            
+            console.log(`Content delivery schedule created for ${selectedTopicIds.length} selected topics`);
+          } else {
+            console.log("No valid topic IDs found in user preferences");
+          }
+        } else {
+          console.log("No topics selected in user preferences - skipping content delivery setup");
+        }
+      } else {
+        console.log("Skipping content delivery setup for upgrade/plan change");
+      }
+
       // Commit transaction
       await client.query("COMMIT");
       console.log("Transaction committed successfully");
@@ -310,8 +394,8 @@ export async function POST(req: NextRequest) {
 }
 
 // GET method to retrieve payment history
-export async function GET(req: NextRequest) {
-  const client = await pool.connect();
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const client = await pool.connect() as DatabaseClient;
   
   try {
     const { searchParams } = new URL(req.url);

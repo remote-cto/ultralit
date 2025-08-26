@@ -1,4 +1,5 @@
 
+//app/api/check-subscription
 import { NextRequest, NextResponse } from "next/server";
 import pool from "../../../utils/database";
 
