@@ -198,7 +198,7 @@ const UserPreferences = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4">
-            Welcome to <span className="text-yellow-500">Ultralit</span>
+            Welcome to <span className="text-yellow-500">ByteDrop</span>
           </h1>
           <p className="text-xl text-gray-600 mb-2">
             Let's personalize your learning journey
