@@ -1,4 +1,4 @@
-//app/components/PaymentPage.tsx
+// Complete PaymentPage.tsx - For per-topic payment system
 
 "use client";
 import React, { useState, useEffect } from "react";
@@ -11,19 +11,6 @@ declare global {
   interface Window {
     Razorpay: any;
   }
-}
-
-interface Subscription {
-  id: number;
-  plan_name: string;
-  status: string;
-  start_date: string;
-  next_renewal_date: string | null;
-  amount: number;
-  currency: string;
-  created_at: string;
-  updated_at: string;
-  is_active: boolean;
 }
 
 interface Plan {
@@ -41,32 +28,36 @@ interface Plan {
   sort_order: number;
 }
 
+interface UserTopic {
+  topic_id: number;
+  topic_name: string;
+  payment_status: string;
+  purchased_date: string;
+  amount_paid?: number;
+  plan_name?: string;
+}
+
 const PaymentPage = () => {
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
-  const [userPreferences, setUserPreferences] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState<{[key: number]: boolean}>({});
-  const [subscriptionStatus, setSubscriptionStatus] =
-    useState<Subscription | null>(null);
-  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
-  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<{id: number, name: string} | null>(null);
+  const [userTopics, setUserTopics] = useState<UserTopic[]>([]);
+  const [loadingUserTopics, setLoadingUserTopics] = useState(true);
 
   // Load Razorpay script
   useEffect(() => {
     const loadRazorpayScript = () => {
       return new Promise((resolve) => {
-        // Check if Razorpay is already loaded
         if (window.Razorpay) {
           setIsRazorpayLoaded(true);
           resolve(true);
           return;
         }
 
-        // Check if script tag already exists
         const existingScript = document.querySelector('script[src*="razorpay"]');
         if (existingScript) {
           existingScript.addEventListener('load', () => {
@@ -76,7 +67,6 @@ const PaymentPage = () => {
           return;
         }
 
-        // Create and load the script
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
@@ -101,56 +91,23 @@ const PaymentPage = () => {
   }, []);
 
   useEffect(() => {
-    // Check if user is authenticated
     if (!isAuthenticated) {
       router.push("/");
       return;
     }
 
-    // Load preferences, check subscription, and load plans
     loadUserData();
+    loadSelectedTopic();
   }, [isAuthenticated, router, user]);
 
   const loadUserData = async () => {
     if (!user?.id) return;
 
     try {
-      // Check subscription status, load preferences, and load plans simultaneously
-      const [subscriptionRes, preferencesRes, plansRes] = await Promise.all([
-        fetch(`/api/check-subscription?user_id=${user.id}`),
-        fetch(`/api/get-user-preferences?user_id=${user.id}`),
+      const [plansRes, userTopicsRes] = await Promise.all([
         fetch("/api/getplans"),
+        fetch(`/api/get-user-topics?user_id=${user.id}`)
       ]);
-
-      // Handle subscription check
-      if (subscriptionRes.ok) {
-        const subscriptionData = await subscriptionRes.json();
-        console.log("Subscription check response:", subscriptionData);
-
-        if (subscriptionData.subscription) {
-          setSubscriptionStatus(subscriptionData.subscription);
-
-          // Check if user has an active subscription
-          if (
-            subscriptionData.subscription.status === "active" &&
-            subscriptionData.subscription.is_active
-          ) {
-            setHasActiveSubscription(true);
-            // Note: We don't redirect here anymore, let user choose to upgrade or add topics
-          }
-        }
-      }
-
-      // Handle preferences
-      if (preferencesRes.ok) {
-        const preferencesData = await preferencesRes.json();
-        if (preferencesData.success && preferencesData.preferences) {
-          setUserPreferences(preferencesData.preferences);
-        } else {
-          // If no preferences found, allow them to continue with payment
-          console.log("No preferences found, but allowing payment to continue");
-        }
-      }
 
       // Handle plans
       if (plansRes.ok) {
@@ -165,14 +122,42 @@ const PaymentPage = () => {
         console.error("Failed to load plans");
         alert("Failed to load payment plans. Please refresh the page.");
       }
+
+      // Handle user topics
+      if (userTopicsRes.ok) {
+        const topicsData = await userTopicsRes.json();
+        if (topicsData.success) {
+          setUserTopics(topicsData.topics || []);
+        }
+      }
     } catch (error) {
       console.error("Error loading user data:", error);
       alert("Error loading data. Please refresh the page.");
     } finally {
-      setIsCheckingSubscription(false);
-      setIsLoadingPreferences(false);
       setIsLoadingPlans(false);
+      setLoadingUserTopics(false);
     }
+  };
+
+  const loadSelectedTopic = () => {
+    const topicId = sessionStorage.getItem("selectedTopicForPayment");
+    const topicName = sessionStorage.getItem("selectedTopicName");
+    
+    if (topicId && topicName) {
+      setSelectedTopic({
+        id: parseInt(topicId, 10),
+        name: topicName
+      });
+    }
+  };
+
+  // Check if user already purchased this specific topic
+  const isTopicAlreadyPurchased = () => {
+    if (!selectedTopic) return false;
+    return userTopics.some(topic => 
+      topic.topic_id === selectedTopic.id && 
+      topic.payment_status === 'completed'
+    );
   };
 
   // Convert database plan to display format
@@ -194,8 +179,8 @@ const PaymentPage = () => {
       name: plan.name,
       price: plan.is_trial ? `${plan.duration_days} Days` : `₹${plan.amount}`,
       amount: plan.amount,
-      period: plan.is_trial ? " Free" : "/month",
-      description: plan.description,
+      period: plan.is_trial ? " Free" : "/topic",
+      description: plan.description + " - Valid for this topic only",
       icon: planIcons[plan.name as keyof typeof planIcons] || "📦",
       features: plan.features?.features || [],
       buttonColor:
@@ -204,79 +189,46 @@ const PaymentPage = () => {
       popular: plan.name === "Professionals & Executives",
       disabled: false,
       is_trial: plan.is_trial,
+      duration_days: plan.duration_days,
     };
   };
 
-  // Modify plans based on current subscription
-  const getModifiedPlans = () => {
-    if (!plans.length) return [];
-
-    const displayPlans = plans.map(convertPlanToDisplayFormat);
-
-    if (!hasActiveSubscription || !subscriptionStatus) return displayPlans;
-
-    return displayPlans.map((plan) => {
-      const isCurrentPlan = plan.name === subscriptionStatus?.plan_name;
-
-      const isLowerTier =
-        (subscriptionStatus?.plan_name === "Professionals & Executives" &&
-          (plan.name === "Students" || plan.name === "Free Trial")) ||
-        (subscriptionStatus?.plan_name === "Students" &&
-          plan.name === "Free Trial");
-
-      return {
-        ...plan,
-        disabled: isCurrentPlan || isLowerTier,
-        description: isCurrentPlan
-          ? "Your current active plan"
-          : isLowerTier
-          ? "Lower tier than your current plan"
-          : plan.description,
-      };
-    });
-  };
-
   const handlePlanSelection = async (plan: any) => {
-    if (isProcessing[plan.id] || plan.disabled) return;
+    if (isProcessing[plan.id] || !selectedTopic) return;
+
+    // Check if topic is already purchased
+    if (isTopicAlreadyPurchased()) {
+      alert("You have already purchased this topic! Redirecting to your dashboard.");
+      router.push("/dashboard");
+      return;
+    }
 
     setIsProcessing(prev => ({ ...prev, [plan.id]: true }));
 
     try {
-      // If user has active subscription, show confirmation for upgrade/change
-      if (hasActiveSubscription && subscriptionStatus) {
-        const confirmMessage =
-          plan.amount > (subscriptionStatus?.amount || 0)
-            ? `Upgrade from ${subscriptionStatus.plan_name} (₹${subscriptionStatus.amount}) to ${plan.name} (₹${plan.amount})?`
-            : `Change from ${subscriptionStatus?.plan_name} to ${plan.name}?`;
-        if (!confirm(confirmMessage)) {
-          setIsProcessing(prev => ({ ...prev, [plan.id]: false }));
-          return;
-        }
-      }
-
       if (plan.amount === 0 || plan.is_trial) {
-        // Handle free trial
-        const response = await fetch("/api/activate-trial", {
+        // Handle free trial for specific topic
+        const response = await fetch("/api/purchase-topic", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             user_id: user?.id,
+            topic_id: selectedTopic.id,
             plan_name: plan.name,
-            preferences: userPreferences,
-            is_upgrade: hasActiveSubscription,
+            amount: 0,
+            payment_status: "completed",
+            duration_days: plan.duration_days,
           }),
         });
 
         const data = await response.json();
 
         if (response.ok && data.success) {
-          alert(
-            hasActiveSubscription
-              ? "Plan changed successfully!"
-              : "Free trial activated successfully!"
-          );
+          alert(`Free trial activated for "${selectedTopic.name}" successfully!`);
+          sessionStorage.removeItem("selectedTopicForPayment");
+          sessionStorage.removeItem("selectedTopicName");
           router.push("/dashboard");
         } else {
           console.error("Failed to activate free trial:", data);
@@ -293,12 +245,7 @@ const PaymentPage = () => {
       }
 
       // Handle paid plans with Razorpay
-      console.log(
-        "Creating order for plan:",
-        plan.name,
-        "Amount:",
-        plan.amount
-      );
+      console.log("Creating order for plan:", plan.name, "Amount:", plan.amount, "Topic:", selectedTopic.name);
 
       const res = await fetch("/api/create-order", {
         method: "POST",
@@ -309,8 +256,10 @@ const PaymentPage = () => {
           notes: {
             plan_name: plan.name,
             user_id: user?.id,
-            is_upgrade: hasActiveSubscription,
-            previous_plan: subscriptionStatus?.plan_name,
+            topic_id: selectedTopic.id,
+            topic_name: selectedTopic.name,
+            payment_type: "topic_purchase",
+            duration_days: plan.duration_days,
           },
         }),
       });
@@ -329,9 +278,7 @@ const PaymentPage = () => {
         amount: data.order.amount,
         currency: data.order.currency,
         name: "ByteDrop",
-        description: hasActiveSubscription
-          ? `${subscriptionStatus?.plan_name} → ${plan.name}`
-          : `${plan.name} Subscription`,
+        description: `${plan.name} - ${selectedTopic.name}`,
         order_id: data.order.id,
         handler: async function (response: any) {
           console.log("Razorpay payment response:", response);
@@ -345,11 +292,11 @@ const PaymentPage = () => {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
                 user_id: user?.id,
+                topic_id: selectedTopic.id,
                 plan_name: plan.name,
                 amount: plan.amount,
-                preferences: userPreferences,
-                is_upgrade: hasActiveSubscription,
-                previous_plan: subscriptionStatus?.plan_name,
+                payment_type: "topic_purchase",
+                duration_days: plan.duration_days,
               }),
             });
 
@@ -357,17 +304,13 @@ const PaymentPage = () => {
             console.log("Payment verification response:", verifyData);
 
             if (verifyRes.ok && verifyData.success) {
-              const successMessage = hasActiveSubscription
-                ? "Plan updated successfully! Welcome to your new plan!"
-                : "Payment successful! Welcome to ByteDrop!";
-              alert(successMessage);
+              alert(`Payment successful! You now have access to "${selectedTopic.name}"`);
+              sessionStorage.removeItem("selectedTopicForPayment");
+              sessionStorage.removeItem("selectedTopicName");
               router.push("/dashboard");
             } else {
               console.error("Payment verification failed:", verifyData);
-              alert(
-                verifyData.error ||
-                  "Payment verification failed. Please contact support."
-              );
+              alert(verifyData.error || "Payment verification failed. Please contact support.");
             }
           } catch (verifyError) {
             console.error("Payment verification error:", verifyError);
@@ -410,239 +353,232 @@ const PaymentPage = () => {
   };
 
   const goBack = () => {
-    if (hasActiveSubscription) {
-      router.push("/dashboard");
-    } else {
-      router.push("/topic-selection");
-    }
+    router.push("/topic-selection");
   };
 
-  const handleGoToDashboard = () => {
+  const goToDashboard = () => {
     router.push("/dashboard");
   };
 
-  // Show loading while checking subscription, loading preferences, or loading plans
-  if (isCheckingSubscription || isLoadingPreferences || isLoadingPlans) {
+  // Show loading while checking plans or user topics
+  if (isLoadingPlans || loadingUserTopics) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-500 mx-auto mb-4"></div>
           <p className="text-xl text-gray-600">
-            {isCheckingSubscription
-              ? "Checking your subscription status..."
-              : isLoadingPlans
-              ? "Loading payment plans..."
-              : "Loading..."}
+            {isLoadingPlans ? "Loading payment plans..." : "Loading your topics..."}
           </p>
         </div>
       </div>
     );
   }
 
-  const modifiedPlans = getModifiedPlans();
+  if (!selectedTopic) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
+          <div className="text-center max-w-md mx-auto p-6">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">No Topic Selected</h2>
+            <p className="text-gray-600 mb-6">Please select a topic first before proceeding to payment.</p>
+            <button
+              onClick={() => router.push("/topic-selection")}
+              className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-6 rounded-lg transition-colors"
+            >
+              Select Topic
+            </button>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  // Check if topic is already purchased
+  if (isTopicAlreadyPurchased()) {
+    const purchasedTopic = userTopics.find(topic => topic.topic_id === selectedTopic.id);
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50">
+          <div className="text-center max-w-md mx-auto p-6 bg-white rounded-xl shadow-lg">
+            <div className="text-6xl mb-4">✅</div>
+            <h2 className="text-2xl font-bold text-green-800 mb-4">Topic Already Purchased</h2>
+            <p className="text-gray-600 mb-4">
+              You have already purchased "{selectedTopic.name}".
+            </p>
+            {purchasedTopic && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-left">
+                <p className="text-sm text-green-700">
+                  <strong>Plan:</strong> {purchasedTopic.plan_name}<br />
+                  <strong>Purchased:</strong> {new Date(purchasedTopic.purchased_date).toLocaleDateString()}<br />
+                  {purchasedTopic.amount_paid && (
+                    <>
+                      <strong>Amount:</strong> ₹{purchasedTopic.amount_paid}
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={goToDashboard}
+                className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+              >
+                Go to Dashboard
+              </button>
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem("selectedTopicForPayment");
+                  sessionStorage.removeItem("selectedTopicName");
+                  router.push("/topic-selection");
+                }}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+              >
+                Select Another Topic
+              </button>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  const modifiedPlans = plans.map(convertPlanToDisplayFormat);
 
   return (
     <>
-     <Header/>
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-12 px-4">
-     
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4">
-            {hasActiveSubscription ? "Manage Your " : "Choose Your "}
-            <span className="text-yellow-500">Plan</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-6">
-            {hasActiveSubscription
-              ? "Upgrade your plan or explore additional topics"
-              : "Select the perfect plan for your learning journey"}
-          </p>
-          <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
+      <Header />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-12 px-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4">
+              Purchase <span className="text-yellow-500">Topic</span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-6">
+              Choose your plan to access "{selectedTopic?.name}"
+            </p>
+            <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
 
-          {/* Show Razorpay loading status */}
-          {!isRazorpayLoaded && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 mr-2"></div>
-                <span className="text-yellow-800 text-sm">Loading payment gateway...</span>
-              </div>
-            </div>
-          )}
-
-          {/* Show current subscription status if exists */}
-          {subscriptionStatus && (
-            <div
-              className={`${
-                hasActiveSubscription
-                  ? "bg-green-100 border-green-300"
-                  : "bg-orange-100 border-orange-300"
-              } rounded-xl p-6 mb-6 max-w-3xl mx-auto`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="text-left">
-                  <p
-                    className={`${
-                      hasActiveSubscription
-                        ? "text-green-800"
-                        : "text-orange-800"
-                    } text-lg font-semibold`}
-                  >
-                    Current Plan:{" "}
-                    <strong>{subscriptionStatus.plan_name}</strong>
-                  </p>
-                  <div className="mt-2 space-y-1">
-                    <p
-                      className={`${
-                        hasActiveSubscription
-                          ? "text-green-700"
-                          : "text-orange-700"
-                      } text-sm`}
-                    >
-                      Status:{" "}
-                      <span className="font-medium capitalize">
-                        {subscriptionStatus.status}
-                      </span>
-                    </p>
-                    <p
-                      className={`${
-                        hasActiveSubscription
-                          ? "text-green-700"
-                          : "text-orange-700"
-                      } text-sm`}
-                    >
-                      Amount: ₹{subscriptionStatus.amount}/month
-                    </p>
-                    {subscriptionStatus.next_renewal_date && (
-                      <p
-                        className={`${
-                          hasActiveSubscription
-                            ? "text-green-700"
-                            : "text-orange-700"
-                        } text-sm`}
-                      >
-                        {hasActiveSubscription ? "Next Renewal" : "Expired on"}:{" "}
-                        {new Date(
-                          subscriptionStatus.next_renewal_date
-                        ).toLocaleDateString("en-IN")}
-                      </p>
-                    )}
-                  </div>
+            {/* Show Razorpay loading status */}
+            {!isRazorpayLoaded && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 mr-2"></div>
+                  <span className="text-yellow-800 text-sm">Loading payment gateway...</span>
                 </div>
-                {hasActiveSubscription && (
-                  <div className="text-right">
-                    <button
-                      onClick={handleGoToDashboard}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
-                    >
-                      Go to Dashboard
-                    </button>
-                  </div>
-                )}
               </div>
-              {!hasActiveSubscription && (
-                <p className="text-orange-700 text-sm mt-2 font-medium">
-                  Your subscription has expired. Please choose a new plan to
-                  continue learning.
-                </p>
-              )}
-            </div>
-          )}
+            )}
 
-          {/* Selected Preferences Summary */}
-          {userPreferences && (
-            <div className="bg-white rounded-xl p-6 shadow-lg border border-yellow-300 max-w-2xl mx-auto">
+            {/* Selected Topic Information */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border border-yellow-300 max-w-2xl mx-auto mb-8">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                Your Selected Preferences
+                Selected Topic
               </h3>
-              <div className="flex flex-wrap justify-center gap-4 text-sm">
-                {userPreferences.role && (
-                  <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full">
-                    👤 {userPreferences.role}
-                  </span>
-                )}
-                {userPreferences.industry && (
-                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                    🏭 {userPreferences.industry}
-                  </span>
-                )}
-                {userPreferences.language && (
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                    🌐 {userPreferences.language}
-                  </span>
-                )}
-                {userPreferences.preferred_mode && (
-                  <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
-                    📱 {userPreferences.preferred_mode}
-                  </span>
-                )}
-                {userPreferences.frequency && (
-                  <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full">
-                    ⏰ {userPreferences.frequency}
-                  </span>
-                )}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="text-xl font-bold text-yellow-800 mb-2">
+                  {selectedTopic?.name}
+                </h4>
+                <p className="text-yellow-700 text-sm">
+                  Choose a plan below to get access to this topic's content, exercises, and materials.
+                </p>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8">
-          {modifiedPlans.map((plan, index) => (
-            <div
-              key={plan.id}
-              className={`relative bg-white rounded-3xl p-8 border transition-all duration-500 ${
-                plan.disabled
-                  ? "opacity-60 cursor-not-allowed border-gray-300"
-                  : plan.popular
-                  ? "border-yellow-400 shadow-xl shadow-yellow-200 scale-105 hover:scale-110"
-                  : "border-yellow-200 shadow-lg hover:scale-105"
-              }`}
-            >
-              {plan.popular && !plan.disabled && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-gray-900 px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                  Most Popular
-                </div>
-              )}
-
-              {plan.disabled && subscriptionStatus?.plan_name === plan.name && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                  Current Plan
-                </div>
-              )}
-
-              <div className="text-center">
-                <div
-                  className={`w-16 h-16 mx-auto mb-6 flex items-center justify-center bg-yellow-100 rounded-2xl text-4xl ${
-                    plan.disabled ? "grayscale" : ""
-                  }`}
-                >
-                  {plan.icon}
-                </div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-4">
-                  {plan.name}
+            {/* Show user's current topics */}
+            {userTopics.length > 0 && (
+              <div className="bg-green-50 rounded-xl p-6 border border-green-200 max-w-3xl mx-auto mb-8">
+                <h3 className="text-lg font-semibold text-green-800 mb-3">
+                  Your Learning Library ({userTopics.length} topic{userTopics.length !== 1 ? 's' : ''})
                 </h3>
-                <div className="mb-6">
-                  <span className="text-4xl font-bold text-yellow-500">
-                    {plan.price}
-                  </span>
-                  <span className="text-lg text-gray-600">{plan.period}</span>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {userTopics.slice(0, 5).map((topic) => (
+                    <span
+                      key={topic.topic_id}
+                      className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm"
+                    >
+                      ✅ {topic.topic_name}
+                    </span>
+                  ))}
+                  {userTopics.length > 5 && (
+                    <span className="text-green-700 text-sm">
+                      +{userTopics.length - 5} more
+                    </span>
+                  )}
                 </div>
-                <p className="text-gray-600 mb-6 leading-relaxed">
-                  {plan.description}
+                <p className="text-green-600 text-sm mt-2">
+                  Each topic you purchase is added to your personal learning library!
                 </p>
+              </div>
+            )}
+          </div>
 
-                {/* Features */}
-                <div className="mb-8 text-left">
-                  <h4 className="font-semibold text-gray-800 mb-3 text-center">
-                    What's included:
-                  </h4>
-                  <ul className="space-y-2">
-                    {plan.features.map((feature, idx) => (
-                      <li
-                        key={idx}
-                        className="flex items-center text-sm text-gray-600"
-                      >
+          {/* Pricing Cards */}
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            {modifiedPlans.map((plan, index) => (
+              <div
+                key={plan.id}
+                className={`relative bg-white rounded-3xl p-8 border transition-all duration-500 ${
+                  plan.popular
+                    ? "border-yellow-400 shadow-xl shadow-yellow-200 scale-105 hover:scale-110"
+                    : "border-yellow-200 shadow-lg hover:scale-105"
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-gray-900 px-6 py-2 rounded-full text-sm font-bold shadow-lg">
+                    Most Popular
+                  </div>
+                )}
+
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-6 flex items-center justify-center bg-yellow-100 rounded-2xl text-4xl">
+                    {plan.icon}
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">
+                    {plan.name}
+                  </h3>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold text-yellow-500">
+                      {plan.price}
+                    </span>
+                    <span className="text-lg text-gray-600">{plan.period}</span>
+                  </div>
+                  <p className="text-gray-600 mb-6 leading-relaxed">
+                    {plan.description}
+                  </p>
+
+                  {/* Features */}
+                  <div className="mb-8 text-left">
+                    <h4 className="font-semibold text-gray-800 mb-3 text-center">
+                      What's included:
+                    </h4>
+                    <ul className="space-y-2">
+                      {plan.features.map((feature, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-center text-sm text-gray-600"
+                        >
+                          <svg
+                            className="w-4 h-4 text-green-500 mr-2 flex-shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                          {feature}
+                        </li>
+                      ))}
+                      <li className="flex items-center text-sm text-gray-600">
                         <svg
                           className="w-4 h-4 text-green-500 mr-2 flex-shrink-0"
                           fill="none"
@@ -656,100 +592,94 @@ const PaymentPage = () => {
                             d="M5 13l4 4L19 7"
                           />
                         </svg>
-                        {feature}
+                        Access to "{selectedTopic?.name}"
                       </li>
-                    ))}
-                  </ul>
+                      {plan.duration_days && (
+                        <li className="flex items-center text-sm text-gray-600">
+                          <svg
+                            className="w-4 h-4 text-green-500 mr-2 flex-shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                          {plan.duration_days === 9999 ? "Lifetime access" : `${plan.duration_days} days access`}
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+
+                  <button
+                    onClick={() => handlePlanSelection(plan)}
+                    disabled={isProcessing[plan.id] || (!isRazorpayLoaded && !plan.is_trial && plan.amount > 0)}
+                    className={`w-full bg-gradient-to-r ${
+                      plan.buttonColor
+                    } text-white py-4 rounded-full font-bold text-lg transition-all duration-300 hover:shadow-xl hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
+                  >
+                    {isProcessing[plan.id] ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Processing...
+                      </div>
+                    ) : !isRazorpayLoaded && !plan.is_trial && plan.amount > 0 ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Loading Payment...
+                      </div>
+                    ) : plan.is_trial || plan.amount === 0 ? (
+                      "Start Free Trial"
+                    ) : (
+                      "Purchase Topic"
+                    )}
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => handlePlanSelection(plan)}
-                  disabled={isProcessing[plan.id] || plan.disabled || (!isRazorpayLoaded && !plan.is_trial && plan.amount > 0)}
-                  className={`w-full bg-gradient-to-r ${
-                    plan.buttonColor
-                  } text-white py-4 rounded-full font-bold text-lg transition-all duration-300 hover:shadow-xl hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
-                    plan.disabled ? "from-gray-400 to-gray-500" : ""
-                  }`}
-                >
-                  {isProcessing[plan.id] ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Processing...
-                    </div>
-                  ) : !isRazorpayLoaded && !plan.is_trial && plan.amount > 0 ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Loading Payment...
-                    </div>
-                  ) : plan.disabled ? (
-                    subscriptionStatus?.plan_name === plan.name ? (
-                      "Current Plan"
-                    ) : (
-                      "Not Available"
-                    )
-                  ) : hasActiveSubscription ? (
-                    plan.amount > (subscriptionStatus?.amount || 0) ? (
-                      "Upgrade Plan"
-                    ) : plan.amount < (subscriptionStatus?.amount || 0) ? (
-                      "Downgrade Plan"
-                    ) : (
-                      "Switch Plan"
-                    )
-                  ) : plan.is_trial || plan.amount === 0 ? (
-                    "Start Free Trial"
-                  ) : (
-                    "Choose Plan"
-                  )}
-                </button>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Additional Information for Active Subscribers */}
-        {hasActiveSubscription && (
-          <div className="mt-12 bg-blue-50 rounded-xl p-6 border border-blue-200">
+          {/* Additional Information */}
+          <div className="bg-blue-50 rounded-xl p-6 border border-blue-200 mb-8">
             <h3 className="text-lg font-semibold text-blue-800 mb-3">
-              💡 For Existing Subscribers
+              💡 How Topic Purchasing Works
             </h3>
             <ul className="text-blue-700 space-y-2 text-sm">
-              <li>• Upgrade to access more premium features and content</li>
-              <li>
-                • Your current subscription will be prorated when you upgrade
-              </li>
-              <li>
-                • You can select additional topics anytime from your dashboard
-              </li>
-              <li>
-                • Changes take effect immediately after payment confirmation
-              </li>
+              <li>• Each topic is purchased individually with your chosen plan</li>
+              <li>• Your payment gives you access to that specific topic for the plan duration</li>
+              <li>• You can purchase additional topics anytime with any plan</li>
+              <li>• All purchased topics appear in your personal dashboard</li>
+              <li>• Mix and match different plan types for different topics</li>
             </ul>
           </div>
-        )}
 
-        {/* Navigation */}
-        <div className="flex justify-between items-center mt-12">
-          <button
-            onClick={goBack}
-            disabled={Object.values(isProcessing).some(Boolean)}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            ← {hasActiveSubscription ? "Back to Dashboard" : "Back to Topics"}
-          </button>
+          {/* Navigation */}
+          <div className="flex justify-between items-center">
+            <button
+              onClick={goBack}
+              disabled={Object.values(isProcessing).some(Boolean)}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ← Back to Topics
+            </button>
 
-          {/* Progress Indicator */}
-          <div className="flex items-center space-x-4">
-            <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-            <div className="w-8 h-1 bg-yellow-400"></div>
-            <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-            <span className="ml-4 text-sm text-gray-600">
-              {hasActiveSubscription ? "Plan Management" : "Final Step"}
-            </span>
+            {userTopics.length > 0 && (
+              <button
+                onClick={goToDashboard}
+                disabled={Object.values(isProcessing).some(Boolean)}
+                className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                View My Topics →
+              </button>
+            )}
           </div>
         </div>
       </div>
-    </div>
-    <Footer/>
+      <Footer />
     </>
   );
 };

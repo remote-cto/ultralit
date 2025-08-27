@@ -1,3 +1,5 @@
+// Modified TopicSelection.tsx - Key changes for per-topic payment
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -32,6 +34,14 @@ interface Category {
   is_active: boolean;
 }
 
+// Add interface for user's purchased topics
+interface UserTopic {
+  topic_id: number;
+  topic_name: string;
+  payment_status: string;
+  purchased_date: string;
+}
+
 const TABS = ["Learn by Industry", "Learn by Topic", "MicroSkill", "Trending"];
 
 const TopicSelection = () => {
@@ -49,6 +59,10 @@ const TopicSelection = () => {
   const [selectedSubCategory, setSelectedSubCategory] = useState<number | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [userIndustry, setUserIndustry] = useState<string | null>(null);
+  
+  // Add state for user's purchased topics
+  const [userTopics, setUserTopics] = useState<UserTopic[]>([]);
+  const [loadingUserTopics, setLoadingUserTopics] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,6 +73,7 @@ const TopicSelection = () => {
     initializeData();
     if (isAuthenticated && user?.id) {
       fetchUserIndustry();
+      fetchUserTopics(); // Fetch user's purchased topics
     }
   }, [isAuthenticated, user]);
 
@@ -83,46 +98,70 @@ const TopicSelection = () => {
     }
   }, [searchParams, isAuthenticated]);
 
-// Add this to your initializeData function in TopicSelection component
-const initializeData = async () => {
-  setLoading(true);
-  try {
-    console.log("Starting to fetch domains and categories...");
+  // Fetch user's purchased topics
+  const fetchUserTopics = async () => {
+    if (!user?.id) return;
     
-    const [domainsRes, categoriesRes] = await Promise.all([
-      fetch("/api/fetch-domains"),
-      fetch("/api/fetch-categories")
-    ]);
-
-    console.log("Domains response status:", domainsRes.status);
-    console.log("Categories response status:", categoriesRes.status);
-
-    const domainsData = await domainsRes.json();
-    const categoriesData = await categoriesRes.json();
-
-    console.log("Domains data:", domainsData);
-    console.log("Categories data:", categoriesData);
-
-    if (domainsData.success) {
-      console.log("Setting domains:", domainsData.domains);
-      setDomains(domainsData.domains || []);
-    } else {
-      console.error("Failed to fetch domains:", domainsData.error);
+    setLoadingUserTopics(true);
+    try {
+      const res = await fetch(`/api/get-user-topics?user_id=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setUserTopics(data.topics || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user topics:", error);
+    } finally {
+      setLoadingUserTopics(false);
     }
-    
-    if (categoriesData.success) {
-      const allCategories = categoriesData.categories || [];
-      setCategories(allCategories);
-      setParentCategories(allCategories.filter((cat: Category) => cat.parent_id === null));
-    } else {
-      console.error("Failed to fetch categories:", categoriesData.error);
+  };
+
+  // Check if user has already purchased a topic
+  const isTopicPurchased = (topicId: number) => {
+    return userTopics.some(ut => ut.topic_id === topicId && ut.payment_status === 'completed');
+  };
+
+  const initializeData = async () => {
+    setLoading(true);
+    try {
+      console.log("Starting to fetch domains and categories...");
+      
+      const [domainsRes, categoriesRes] = await Promise.all([
+        fetch("/api/fetch-domains"),
+        fetch("/api/fetch-categories")
+      ]);
+
+      console.log("Domains response status:", domainsRes.status);
+      console.log("Categories response status:", categoriesRes.status);
+
+      const domainsData = await domainsRes.json();
+      const categoriesData = await categoriesRes.json();
+
+      console.log("Domains data:", domainsData);
+      console.log("Categories data:", categoriesData);
+
+      if (domainsData.success) {
+        console.log("Setting domains:", domainsData.domains);
+        setDomains(domainsData.domains || []);
+      } else {
+        console.error("Failed to fetch domains:", domainsData.error);
+      }
+      
+      if (categoriesData.success) {
+        const allCategories = categoriesData.categories || [];
+        setCategories(allCategories);
+        setParentCategories(allCategories.filter((cat: Category) => cat.parent_id === null));
+      } else {
+        console.error("Failed to fetch categories:", categoriesData.error);
+      }
+    } catch (error) {
+      console.error("Error initializing data:", error);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error initializing data:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const fetchUserIndustry = async () => {
     try {
@@ -214,6 +253,7 @@ const initializeData = async () => {
     router.push("/auth?redirect=topic-selection");
   };
 
+  // Modified handleNext to redirect to payment for each topic
   const handleNext = async () => {
     if (!selectedTopic) {
       alert("Please select one topic to continue");
@@ -234,33 +274,19 @@ const initializeData = async () => {
       return;
     }
 
-    setSaving(true);
-    try {
-      const res = await fetch("/api/update-topics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: user.id,
-          topic_ids: [Number(selectedTopic)],
-        }),
-      });
-
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
-      const data = await res.json();
-      if (data.success) {
-        sessionStorage.removeItem("pendingTopicSelection");
-        sessionStorage.removeItem("pendingDomainSelection");
-        router.push("/payment");
-      } else {
-        alert("Failed to save topic selection: " + (data.error || "Unknown error"));
-      }
-    } catch (error) {
-      console.error("Error saving topic selection:", error);
-      alert("Error saving topic selection. Please try again.");
-    } finally {
-      setSaving(false);
+    // Check if topic is already purchased
+    if (isTopicPurchased(selectedTopic)) {
+      alert("You have already purchased this topic! You can access it from your dashboard.");
+      router.push("/dashboard");
+      return;
     }
+
+    // Store selected topic in session and redirect to payment
+    sessionStorage.setItem("selectedTopicForPayment", selectedTopic.toString());
+    sessionStorage.setItem("selectedTopicName", topics.find(t => t.id === selectedTopic)?.name || "");
+    
+    // Always redirect to payment page for topic purchase
+    router.push("/payment");
   };
 
   const LoadingSpinner = () => (
@@ -291,6 +317,7 @@ const initializeData = async () => {
     </div>
   );
 
+  // Modified TopicsDisplay with purchase status indicators
   const TopicsDisplay = ({ title, backAction }: { title: string; backAction?: () => void }) => (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
@@ -315,32 +342,53 @@ const initializeData = async () => {
 
       {!loading && topics.length > 0 && (
         <div className="space-y-4 sm:space-y-6">
-          {/* Horizontal Topics Display - Responsive Grid */}
+          {/* Horizontal Topics Display with purchase status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
-            {topics.map((topic) => (
-              <button
-                key={topic.id}
-                onClick={() => handleTopicSelect(topic.id)}
-                className={`px-3 py-2 sm:px-4 sm:py-3 rounded-full font-medium transition-all duration-200 cursor-pointer text-xs sm:text-sm text-center
-                  ${selectedTopic === topic.id
-                    ? "bg-yellow-400 text-black shadow-lg scale-105"
-                    : "bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:shadow-md hover:scale-102"
-                  }`}
-              >
-                {topic.name}
-              </button>
-            ))}
+            {topics.map((topic) => {
+              const isPurchased = isTopicPurchased(topic.id);
+              const isSelected = selectedTopic === topic.id;
+              
+              return (
+                <div key={topic.id} className="relative">
+                  <button
+                    onClick={() => handleTopicSelect(topic.id)}
+                    className={`w-full px-3 py-2 sm:px-4 sm:py-3 rounded-full font-medium transition-all duration-200 cursor-pointer text-xs sm:text-sm text-center
+                      ${isPurchased
+                        ? "bg-green-100 border-2 border-green-400 text-green-800"
+                        : isSelected
+                        ? "bg-yellow-400 text-black shadow-lg scale-105"
+                        : "bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:shadow-md hover:scale-102"
+                      }`}
+                  >
+                    {topic.name}
+                  </button>
+                  {isPurchased && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          {/* Selected Topic Details */}
+          {/* Selected Topic Details with purchase status */}
           {selectedTopic && (
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg">
+            <div className={`border-2 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg ${
+              isTopicPurchased(selectedTopic) 
+                ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200" 
+                : "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200"
+            }`}>
               <div className="flex items-start justify-between mb-4">
                 <h4 className="text-lg sm:text-2xl font-bold text-gray-800 flex-1 mr-2">
                   {topics.find((t) => t.id === selectedTopic)?.name}
                 </h4>
-                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
-                  Selected
+                <span className={`px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${
+                  isTopicPurchased(selectedTopic)
+                    ? "bg-green-100 text-green-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}>
+                  {isTopicPurchased(selectedTopic) ? "Purchased" : "Selected"}
                 </span>
               </div>
               <div className="text-gray-700 mb-4">
@@ -351,6 +399,15 @@ const initializeData = async () => {
                   {topics.find((t) => t.id === selectedTopic)?.description}
                 </p>
               </div>
+              
+              {/* Purchase status message */}
+              {isTopicPurchased(selectedTopic) && (
+                <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg">
+                  <p className="text-green-800 text-sm">
+                    You have already purchased this topic! You can access it from your dashboard.
+                  </p>
+                </div>
+              )}
               
               {/* Badges for special topics */}
               <div className="flex flex-wrap gap-2">
@@ -391,6 +448,19 @@ const initializeData = async () => {
                     ? "We found matching topics for your industry below!"
                     : "Select any industry below to explore topics."
                   }
+                </span>
+              </p>
+            </div>
+          )}
+
+          {/* Show user's purchased topics count */}
+          {isAuthenticated && userTopics.length > 0 && (
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-800 text-xs sm:text-sm">
+                <strong>Your Progress:</strong> You have purchased {userTopics.length} topic{userTopics.length !== 1 ? 's' : ''}
+                <br />
+                <span className="text-green-600">
+                  Continue exploring to add more topics to your learning path!
                 </span>
               </p>
             </div>
@@ -502,29 +572,50 @@ const initializeData = async () => {
       {!loading && topics.length > 0 && (
         <div className="space-y-4 sm:space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
-            {topics.map((topic) => (
-              <button
-                key={topic.id}
-                onClick={() => handleTopicSelect(topic.id)}
-                className={`px-3 py-2 sm:px-4 sm:py-3 rounded-full font-medium transition-all duration-200 cursor-pointer text-xs sm:text-sm text-center
-                  ${selectedTopic === topic.id
-                    ? "bg-yellow-400 text-black shadow-lg scale-105"
-                    : "bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:shadow-md hover:scale-102"
-                  }`}
-              >
-                {topic.name}
-              </button>
-            ))}
+            {topics.map((topic) => {
+              const isPurchased = isTopicPurchased(topic.id);
+              const isSelected = selectedTopic === topic.id;
+              
+              return (
+                <div key={topic.id} className="relative">
+                  <button
+                    onClick={() => handleTopicSelect(topic.id)}
+                    className={`w-full px-3 py-2 sm:px-4 sm:py-3 rounded-full font-medium transition-all duration-200 cursor-pointer text-xs sm:text-sm text-center
+                      ${isPurchased
+                        ? "bg-green-100 border-2 border-green-400 text-green-800"
+                        : isSelected
+                        ? "bg-yellow-400 text-black shadow-lg scale-105"
+                        : "bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:shadow-md hover:scale-102"
+                      }`}
+                  >
+                    {topic.name}
+                  </button>
+                  {isPurchased && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {selectedTopic && (
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg">
+            <div className={`border-2 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg ${
+              isTopicPurchased(selectedTopic) 
+                ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200" 
+                : "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200"
+            }`}>
               <div className="flex items-start justify-between mb-4">
                 <h4 className="text-lg sm:text-2xl font-bold text-gray-800 flex-1 mr-2">
                   {topics.find((t) => t.id === selectedTopic)?.name}
                 </h4>
-                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
-                  Selected
+                <span className={`px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${
+                  isTopicPurchased(selectedTopic)
+                    ? "bg-green-100 text-green-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}>
+                  {isTopicPurchased(selectedTopic) ? "Purchased" : "Selected"}
                 </span>
               </div>
               <div className="text-gray-700 mb-4">
@@ -535,6 +626,15 @@ const initializeData = async () => {
                   {topics.find((t) => t.id === selectedTopic)?.description}
                 </p>
               </div>
+              
+              {isTopicPurchased(selectedTopic) && (
+                <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg">
+                  <p className="text-green-800 text-sm">
+                    You have already purchased this topic! You can access it from your dashboard.
+                  </p>
+                </div>
+              )}
+              
               <div className="flex flex-wrap gap-2">
                 {topics.find((t) => t.id === selectedTopic)?.is_microlearning && (
                   <span className="inline-block px-2 py-1 sm:px-3 bg-green-100 text-green-800 text-xs sm:text-sm rounded-full">
@@ -554,6 +654,7 @@ const initializeData = async () => {
     </div>
   );
 
+  // Modified NavigationButtons with purchase status
   const NavigationButtons = () => (
     <div className="mt-6 sm:mt-8 bg-gradient-to-r from-gray-50 to-yellow-50 border border-yellow-200 p-4 sm:p-6 rounded-lg sm:rounded-xl shadow-sm">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -565,21 +666,30 @@ const initializeData = async () => {
         </button>
 
         {selectedTopic ? (
-          <button
-            onClick={handleNext}
-            disabled={saving}
-            className={`w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 sm:py-3 px-6 sm:px-8 rounded-lg text-base sm:text-lg transition-all duration-300 
-              ${saving ? "opacity-50 cursor-not-allowed" : "hover:shadow-lg hover:scale-105"}`}
-          >
-            {saving ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                Saving...
-              </div>
-            ) : (
-              "Confirm & Continue"
-            )}
-          </button>
+          isTopicPurchased(selectedTopic) ? (
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-2 sm:py-3 px-6 sm:px-8 rounded-lg text-base sm:text-lg transition-all duration-300 hover:shadow-lg hover:scale-105"
+            >
+              Go to Dashboard
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              disabled={saving}
+              className={`w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 sm:py-3 px-6 sm:px-8 rounded-lg text-base sm:text-lg transition-all duration-300 
+                ${saving ? "opacity-50 cursor-not-allowed" : "hover:shadow-lg hover:scale-105"}`}
+            >
+              {saving ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                  Processing...
+                </div>
+              ) : (
+                "Purchase Topic"
+              )}
+            </button>
+          )
         ) : (
           <button className="w-full sm:w-auto bg-transparent text-gray-400 font-medium py-2 sm:py-3 px-6 sm:px-8 cursor-default text-sm sm:text-base" disabled>
             Select a topic to continue
@@ -597,7 +707,7 @@ const initializeData = async () => {
         <div className="bg-white rounded-lg sm:rounded-xl p-6 sm:p-8 max-w-md w-full mx-4 shadow-2xl">
           <h3 className="text-xl sm:text-2xl font-bold text-blue-800 mb-4">Ready to Get Started?</h3>
           <p className="text-gray-600 mb-6 text-sm sm:text-base">
-            Sign up or log in to select this topic and continue your learning journey!
+            Sign up or log in to purchase this topic and start your learning journey!
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <button
@@ -628,13 +738,14 @@ const initializeData = async () => {
           <div className="text-center mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2 sm:mb-4">Explore Topics</h2>
             <p className="text-base sm:text-lg text-gray-600 mb-2 sm:mb-4">
-              Choose a topic that matches your learning goals
+              Choose topics that match your learning goals - purchase individual topics as you go!
             </p>
 
             {isAuthenticated && user?.name && (
               <div className="mt-4 p-3 sm:p-4 bg-green-100 rounded-lg border border-green-200">
                 <p className="text-green-800 text-xs sm:text-sm">
-                  Welcome back, {user.name}! Select a topic to continue.
+                  Welcome back, {user.name}! 
+                  {userTopics.length > 0 && ` You have ${userTopics.length} topic${userTopics.length !== 1 ? 's' : ''} in your library.`}
                 </p>
               </div>
             )}

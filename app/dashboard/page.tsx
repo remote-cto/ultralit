@@ -1,4 +1,5 @@
 "use client";
+
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -15,11 +16,29 @@ import {
   Search,
   Menu,
   ChevronLeft,
+  Calendar,
+  DollarSign,
+  AlertCircle,
+  Clock,
+  CheckCircle,
 } from "lucide-react";
 import RouteGuard from "../components/RouteGuard";
 
+// Updated types to match the per-topic model
+interface UserTopic {
+  topic_id: number;
+  topic_name: string;
+  payment_status: string;
+  purchased_date: string;
+  expires_at: string | null;
+  amount_paid: number;
+  plan_name: string;
+  status: string;
+  payment_id?: string;
+  topic_description?: string;
+  topic_type?: string;
+}
 
-// Define types
 interface Subscription {
   id: number;
   plan_name: string;
@@ -31,7 +50,7 @@ interface Subscription {
   created_at: string;
   updated_at: string;
   is_active: boolean;
-  topics?: string[];
+  auto_renewal?: boolean;
 }
 
 interface Preferences {
@@ -43,20 +62,33 @@ interface Preferences {
   topic_ids: string[] | string;
 }
 
+interface PaymentHistoryItem {
+  id: number;
+  razorpay_payment_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  plan_name?: string;
+  topic_name?: string;
+  payment_method: string;
+}
+
 export default function Dashboard() {
   const { isAuthenticated, user, logout } = useAuth();
   const router = useRouter();
-
-  const [activeTab, setActiveTab] = useState("subscriptions");
+  const [activeTab, setActiveTab] = useState("topics");
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [userTopics, setUserTopics] = useState<UserTopic[]>([]);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
   const [preferences, setPreferences] = useState<Preferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingPreferences, setEditingPreferences] = useState(false);
-  const [editedPreferences, setEditedPreferences] =
-    useState<Preferences | null>(null);
+  const [editedPreferences, setEditedPreferences] = useState<Preferences | null>(null);
   const [saving, setSaving] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Changed default to false for mobile-first
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Options for preferences
   const roleOptions = [
@@ -91,11 +123,12 @@ export default function Dashboard() {
     { id: "explore", label: "Explore Topics", icon: Search, route: "/topic-selection" },
   ];
 
-  // Tab items (dashboard sections)
+  // Updated tab items
   const tabItems = [
-    { id: "subscriptions", label: "My Subscriptions", icon: BookOpen },
+    { id: "topics", label: "My Topics", icon: BookOpen },
+    { id: "subscriptions", label: "Subscriptions", icon: Calendar },
     { id: "settings", label: "Settings", icon: Settings },
-    { id: "payment", label: "Payment Information", icon: CreditCard },
+    { id: "payment", label: "Payment History", icon: CreditCard },
   ];
 
   // Handle responsive behavior
@@ -103,42 +136,99 @@ export default function Dashboard() {
     const checkScreenSize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // Auto-open sidebar on desktop, keep closed on mobile
-      if (!mobile && !sidebarOpen) {
+      if (!mobile) {
         setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
       }
     };
 
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
-  }, [sidebarOpen]);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/");
       return;
     }
-
+    
     async function fetchData() {
       try {
-        const [subRes, prefRes] = await Promise.all([
+        setLoading(true);
+        setError(null);
+        console.log("Fetching dashboard data for user:", user?.id);
+
+        const fetchPromises = [
+          fetch(`/api/get-user-topics?user_id=${user?.id}`),
           fetch(`/api/check-subscription?user_id=${user?.id}`),
           fetch(`/api/get-user-preferences?user_id=${user?.id}`),
-        ]);
+          fetch(`/api/verify-payment?user_id=${user?.id}`), // For payment history
+        ];
 
-        const subData = await subRes.json();
-        const prefData = await prefRes.json();
+        const [topicsRes, subRes, prefRes, paymentRes] = await Promise.all(fetchPromises);
 
-        if (subData.success && subData.hasSubscription) {
-          setSubscription(subData.subscription);
+        // Handle user topics
+        try {
+          const topicsData = await topicsRes.json();
+          console.log("Topics response:", topicsData);
+          if (topicsData.success) {
+            setUserTopics(topicsData.topics || []);
+          } else {
+            console.error("Failed to fetch topics:", topicsData.error);
+            setUserTopics([]);
+          }
+        } catch (topicsError) {
+          console.error("Error parsing topics response:", topicsError);
+          setUserTopics([]);
         }
-        if (prefData.success) {
-          setPreferences(prefData.preferences);
-          setEditedPreferences(prefData.preferences);
+
+        // Handle subscription (optional)
+        try {
+          if (subRes.ok) {
+            const subData = await subRes.json();
+            console.log("Subscription response:", subData);
+            if (subData.success && subData.hasSubscription) {
+              setSubscription(subData.subscription);
+            } else {
+              setSubscription(null);
+            }
+          }
+        } catch (subError) {
+          console.log("No subscription data available:", subError);
+          setSubscription(null);
+        }
+
+        // Handle preferences
+        try {
+          if (prefRes.ok) {
+            const prefData = await prefRes.json();
+            console.log("Preferences response:", prefData);
+            if (prefData.success) {
+              setPreferences(prefData.preferences);
+              setEditedPreferences(prefData.preferences);
+            }
+          }
+        } catch (prefError) {
+          console.log("No preferences data available:", prefError);
+        }
+
+        // Handle payment history
+        try {
+          if (paymentRes.ok) {
+            const paymentData = await paymentRes.json();
+            console.log("Payment history response:", paymentData);
+            if (paymentData.success && paymentData.payments) {
+              setPaymentHistory(paymentData.payments);
+            }
+          }
+        } catch (paymentError) {
+          console.log("No payment history available:", paymentError);
         }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
+        setError("Failed to load dashboard data. Please try refreshing the page.");
       } finally {
         setLoading(false);
       }
@@ -156,7 +246,6 @@ export default function Dashboard() {
 
   const handleRouteNavigation = (route: string) => {
     router.push(route);
-    // Close sidebar on mobile after navigation
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -164,7 +253,6 @@ export default function Dashboard() {
 
   const handleSavePreferences = async () => {
     if (!editedPreferences || !user?.id) return;
-
     setSaving(true);
     try {
       const response = await fetch("/api/update-user-preferences", {
@@ -179,7 +267,6 @@ export default function Dashboard() {
           frequency: editedPreferences.frequency,
         }),
       });
-
       const data = await response.json();
       if (data.success) {
         setPreferences(editedPreferences);
@@ -209,7 +296,7 @@ export default function Dashboard() {
       day: "numeric",
     });
   };
-
+  
   // Helper function to get currency symbol
   const getCurrencySymbol = (currency: string) => {
     const symbols: { [key: string]: string } = {
@@ -219,25 +306,190 @@ export default function Dashboard() {
     };
     return symbols[currency?.toUpperCase()] || currency;
   };
+  
+  // Helper function to check if topic is expired
+  const isTopicExpired = (expiresAt: string | null) => {
+    if (!expiresAt) return false;
+    return new Date(expiresAt) < new Date();
+  };
 
+  // Helper function to get status color
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'captured':
+      case 'success':
+        return 'bg-green-100 text-green-700';
+      case 'expired':
+      case 'failed':
+        return 'bg-red-100 text-red-700';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+  
   if (!isAuthenticated || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 px-4">
-        <div className="animate-pulse text-lg font-medium text-gray-700 text-center">
-          Loading your dashboard...
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-lg font-medium text-gray-700">
+            Loading your dashboard...
+          </div>
         </div>
       </div>
     );
   }
 
-  const renderSubscriptions = () => (
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 px-4">
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center max-w-md">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">
+            Something went wrong
+          </h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Render user topics
+  const renderUserTopics = () => (
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+          <BookOpen className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
+          My Learning Topics ({userTopics.length})
+        </h2>
+        <button
+          onClick={() => router.push("/topic-selection")}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
+        >
+          Explore More Topics
+        </button>
+      </div>
+      {userTopics.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {userTopics.map((topic,index) => {
+            const expired = isTopicExpired(topic.expires_at);
+            return (
+              <div
+                 key={`${topic.topic_id}-${index}`}
+                className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border-l-4 border-blue-500 hover:shadow-xl transition-shadow"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-lg font-semibold text-gray-800 line-clamp-2">
+                    {topic.topic_name}
+                  </h3>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ml-2 ${
+                      expired
+                        ? "bg-red-100 text-red-700"
+                        : getStatusColor(topic.status)
+                    }`}
+                  >
+                    {expired ? "Expired" : topic.status}
+                  </span>
+                </div>
+                {topic.topic_description && (
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                    {topic.topic_description}
+                  </p>
+                )}
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex justify-between">
+                    <span>Plan:</span>
+                    <span className="font-medium">{topic.plan_name}</span>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span>Amount Paid:</span>
+                    <span className="font-medium">
+                      {topic.amount_paid > 0 ? `₹${topic.amount_paid}` : "Free"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Purchased:</span>
+                    <span className="font-medium">
+                      {formatDate(topic.purchased_date)}
+                    </span>
+                  </div>
+                  {topic.expires_at && (
+                    <div className="flex justify-between">
+                      <span>Expires:</span>
+                      <span className={`font-medium ${expired ? "text-red-600" : ""}`}>
+                        {formatDate(topic.expires_at)}
+                      </span>
+                    </div>
+                  )}
+                  {topic.payment_id && (
+                    <div className="flex justify-between">
+                      <span>Payment ID:</span>
+                      <span className="font-medium text-xs">
+                        {topic.payment_id.substring(0, 10)}...
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 pt-3 border-t">
+                  <button
+                    onClick={() => {
+                      // Navigate to topic content
+                      console.log("Navigate to topic:", topic.topic_id);
+                      // You can implement navigation here
+                    }}
+                    disabled={expired}
+                    className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                      expired
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    }`}
+                  >
+                    {expired ? "Access Expired" : "Continue Learning"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+          <BookOpen className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">
+            No topics purchased yet
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Start your learning journey by exploring our topics and choosing one that interests you.
+          </p>
+          <button
+            onClick={() => router.push("/topic-selection")}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Explore Topics
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
+  // Render subscriptions
+  const renderSubscriptions = () => (
     <div className="space-y-4 sm:space-y-6">
       <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
-        <BookOpen className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
-        My Subscriptions
+        <Calendar className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
+        Traditional Subscriptions
       </h2>
-
       <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
         {subscription ? (
           <div className="space-y-4">
@@ -246,18 +498,11 @@ export default function Dashboard() {
                 {subscription.plan_name}
               </h3>
               <span
-                className={`px-3 py-1 rounded-full text-sm font-medium self-start sm:self-auto ${
-                  subscription.status === "active"
-                    ? "bg-green-100 text-green-700"
-                    : subscription.status === "expired"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-yellow-100 text-yellow-700"
-                }`}
+                className={`px-3 py-1 rounded-full text-sm font-medium self-start sm:self-auto ${getStatusColor(subscription.status)}`}
               >
                 {subscription.status}
               </span>
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               <div>
                 <h4 className="font-medium text-gray-700">Plan Amount</h4>
@@ -281,37 +526,36 @@ export default function Dashboard() {
                 </div>
               )}
               <div>
-                <h4 className="font-medium text-gray-700">Status</h4>
+                <h4 className="font-medium text-gray-700">Auto Renewal</h4>
                 <p className="text-gray-800">
-                  {subscription.is_active ? "Active" : "Inactive"}
+                  {subscription.auto_renewal ? "Enabled" : "Disabled"}
                 </p>
               </div>
             </div>
-
-            {subscription.topics && subscription.topics.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-700 mb-2">
-                  Subscribed Topics:
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {subscription.topics.map((topic, index) => (
-                    <span
-                      key={index}
-                      className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
+            {subscription.status === "active" && subscription.auto_renewal && (
+              <div className="bg-blue-50 p-4 rounded-lg mt-4">
+                <p className="text-blue-800 text-sm">
+                  Your subscription will automatically renew on{" "}
+                  {subscription.next_renewal_date &&
+                    formatDate(subscription.next_renewal_date)}
+                </p>
               </div>
             )}
           </div>
         ) : (
           <div className="text-center py-8">
-            <BookOpen className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-gray-500 text-lg">No active subscription</p>
-            <button className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-              Browse Plans
+            <Calendar className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              No Active Subscription
+            </h3>
+            <p className="text-gray-600 mb-6">
+              You don't have any traditional subscription. You can purchase individual topics instead.
+            </p>
+            <button
+              onClick={() => router.push("/topic-selection")}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Browse Topics
             </button>
           </div>
         )}
@@ -319,439 +563,410 @@ export default function Dashboard() {
     </div>
   );
 
+  // Render settings
   const renderSettings = () => (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
           <Settings className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
-          Settings
+          Account Settings
         </h2>
-        {!editingPreferences ? (
+        {preferences && !editingPreferences && (
           <button
             onClick={() => setEditingPreferences(true)}
-            className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto justify-center sm:justify-start"
           >
-            <Edit2 className="w-4 h-4 mr-2" />
+            <Edit2 className="w-4 h-4" />
             Edit Preferences
           </button>
-        ) : (
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <button
-              onClick={handleSavePreferences}
-              disabled={saving}
-              className="flex items-center justify-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? "Saving..." : "Save"}
-            </button>
-            <button
-              onClick={handleCancelEdit}
-              className="flex items-center justify-center bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </button>
-          </div>
         )}
       </div>
-
       <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
         {preferences ? (
           <div className="space-y-6">
-            {/* Role */}
+            {/* User Profile Section */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Role
-              </label>
-              {editingPreferences ? (
-                <select
-                  value={editedPreferences?.role || ""}
-                  onChange={(e) =>
-                    setEditedPreferences((prev) =>
-                      prev ? { ...prev, role: e.target.value } : null
-                    )
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {roleOptions.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-gray-800 p-3 bg-gray-50 rounded-lg break-words">
-                  {preferences.role}
-                </p>
-              )}
-            </div>
-
-            {/* Industry */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Industry
-              </label>
-              {editingPreferences ? (
-                <select
-                  value={editedPreferences?.industry || ""}
-                  onChange={(e) =>
-                    setEditedPreferences((prev) =>
-                      prev ? { ...prev, industry: e.target.value } : null
-                    )
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {industryOptions.map((industry) => (
-                    <option key={industry} value={industry}>
-                      {industry}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-gray-800 p-3 bg-gray-50 rounded-lg break-words">
-                  {preferences.industry}
-                </p>
-              )}
-            </div>
-
-            {/* Language */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Language
-              </label>
-              {editingPreferences ? (
-                <select
-                  value={editedPreferences?.language || ""}
-                  onChange={(e) =>
-                    setEditedPreferences((prev) =>
-                      prev ? { ...prev, language: e.target.value } : null
-                    )
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {languageOptions.map((language) => (
-                    <option key={language} value={language}>
-                      {language}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-gray-800 p-3 bg-gray-50 rounded-lg">
-                  {preferences.language}
-                </p>
-              )}
-            </div>
-
-            {/* Preferred Mode */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Preferred Mode
-              </label>
-              {editingPreferences ? (
-                <select
-                  value={editedPreferences?.preferred_mode || ""}
-                  onChange={(e) =>
-                    setEditedPreferences((prev) =>
-                      prev ? { ...prev, preferred_mode: e.target.value } : null
-                    )
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {modeOptions.map((mode) => (
-                    <option key={mode} value={mode}>
-                      {mode}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-gray-800 p-3 bg-gray-50 rounded-lg">
-                  {preferences.preferred_mode}
-                </p>
-              )}
-            </div>
-
-            {/* Frequency */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Frequency
-              </label>
-              {editingPreferences ? (
-                <select
-                  value={editedPreferences?.frequency || ""}
-                  onChange={(e) =>
-                    setEditedPreferences((prev) =>
-                      prev ? { ...prev, frequency: e.target.value } : null
-                    )
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {frequencyOptions.map((freq) => (
-                    <option key={freq} value={freq}>
-                      {freq}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-gray-800 p-3 bg-gray-50 rounded-lg">
-                  {preferences.frequency}
-                </p>
-              )}
-            </div>
-          </div>
-        ) : (
-          <p className="text-gray-500 italic">No preferences found</p>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderPaymentInfo = () => (
-    <div className="space-y-4 sm:space-y-6">
-      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
-        <CreditCard className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
-        Payment Information
-      </h2>
-
-      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
-        {subscription ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-medium text-gray-700">Plan Name</h3>
-                <p className="text-gray-800 break-words">{subscription.plan_name}</p>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-700">Amount</h3>
-                <p className="text-gray-800">
-                  {getCurrencySymbol(subscription.currency)}
-                  {subscription.amount}
-                </p>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-700">Currency</h3>
-                <p className="text-gray-800">{subscription.currency}</p>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-700">
-                  Subscription Start Date
-                </h3>
-                <p className="text-gray-800">
-                  {formatDate(subscription.start_date)}
-                </p>
-              </div>
-              {subscription.next_renewal_date && (
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <User className="mr-2 w-5 h-5" />
+                Profile Information
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <h3 className="font-medium text-gray-700">
-                    Next Billing Date
-                  </h3>
-                  <p className="text-gray-800">
-                    {formatDate(subscription.next_renewal_date)}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Name
+                  </label>
+                  <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
+                    {user?.name || "Not provided"}
                   </p>
                 </div>
-              )}
-              <div>
-                <h3 className="font-medium text-gray-700">Payment Status</h3>
-                <span
-                  className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                    subscription.status === "active"
-                      ? "bg-green-100 text-green-700"
-                      : subscription.status === "expired"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}
-                >
-                  {subscription.status}
-                </span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email
+                  </label>
+                  <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
+                    {user?.email || "Not provided"}
+                  </p>
+                </div>
               </div>
             </div>
-
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-800 mb-2">
-                Subscription Details
-              </h4>
-              <div className="text-sm text-blue-700 space-y-1">
-                <p>Created: {formatDate(subscription.created_at)}</p>
-                <p>Last Updated: {formatDate(subscription.updated_at)}</p>
-              </div>
+            {/* Learning Preferences Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Learning Preferences
+              </h3>
+              
+              {editingPreferences && editedPreferences ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Role
+                      </label>
+                      <select
+                        value={editedPreferences.role}
+                        onChange={(e) =>
+                          setEditedPreferences({
+                            ...editedPreferences,
+                            role: e.target.value,
+                          })
+                        }
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {roleOptions.map((role) => (
+                          <option key={role} value={role}>
+                            {role}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Industry
+                      </label>
+                      <select
+                        value={editedPreferences.industry}
+                        onChange={(e) =>
+                          setEditedPreferences({
+                            ...editedPreferences,
+                            industry: e.target.value,
+                          })
+                        }
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {industryOptions.map((industry) => (
+                          <option key={industry} value={industry}>
+                            {industry}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Language
+                      </label>
+                      <select
+                        value={editedPreferences.language}
+                        onChange={(e) =>
+                          setEditedPreferences({
+                            ...editedPreferences,
+                            language: e.target.value,
+                          })
+                        }
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {languageOptions.map((language) => (
+                          <option key={language} value={language}>
+                            {language}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Preferred Mode
+                      </label>
+                      <select
+                        value={editedPreferences.preferred_mode}
+                        onChange={(e) =>
+                          setEditedPreferences({
+                            ...editedPreferences,
+                            preferred_mode: e.target.value,
+                          })
+                        }
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {modeOptions.map((mode) => (
+                          <option key={mode} value={mode}>
+                            {mode}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Frequency
+                      </label>
+                      <select
+                        value={editedPreferences.frequency}
+                        onChange={(e) =>
+                          setEditedPreferences({
+                            ...editedPreferences,
+                            frequency: e.target.value,
+                          })
+                        }
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {frequencyOptions.map((frequency) => (
+                          <option key={frequency} value={frequency}>
+                            {frequency}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                    <button
+                      onClick={handleSavePreferences}
+                      disabled={saving}
+                      className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4" />
+                      {saving ? "Saving..." : "Save Changes"}
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="flex items-center justify-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Role
+                    </label>
+                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
+                      {preferences.role}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Industry
+                    </label>
+                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
+                      {preferences.industry}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Language
+                    </label>
+                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
+                      {preferences.language}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Preferred Mode
+                    </label>
+                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
+                      {preferences.preferred_mode}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Frequency
+                    </label>
+                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
+                      {preferences.frequency}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
           <div className="text-center py-8">
-            <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-gray-500 text-lg">
-              No payment information available
-            </p>
-            <p className="text-gray-400 text-sm mt-2">
-              Subscribe to a plan to see payment details
-            </p>
+            <Settings className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              No Preferences Set
+            </h3>
+            <p className="text-gray-600">Please set your preferences to personalize your experience.</p>
           </div>
         )}
       </div>
     </div>
   );
 
+  // Render payment history
+  const renderPaymentHistory = () => (
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+        <CreditCard className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
+        Payment History
+      </h2>
+      {paymentHistory.length > 0 ? (
+        <div className="bg-white rounded-xl shadow-lg overflow-x-auto">
+          <table className="w-full text-sm text-left text-gray-600">
+            <thead className="text-xs text-gray-700 uppercase bg-gray-100">
+              <tr>
+                <th scope="col" className="px-6 py-3">Date</th>
+                <th scope="col" className="px-6 py-3">Description</th>
+                <th scope="col" className="px-6 py-3">Amount</th>
+                <th scope="col" className="px-6 py-3">Status</th>
+                <th scope="col" className="px-6 py-3">Payment ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paymentHistory.map((item) => (
+                <tr key={item.id} className="bg-white border-b hover:bg-gray-50">
+                  <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                    {formatDate(item.created_at)}
+                  </td>
+                  <td className="px-6 py-4">{item.topic_name || item.plan_name || 'General Payment'}</td>
+                  <td className="px-6 py-4">
+                    {getCurrencySymbol(item.currency)}{item.amount}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                      {item.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-gray-500">{item.razorpay_payment_id}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+          <CreditCard className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">
+            No Payment History Found
+          </h3>
+          <p className="text-gray-600">
+            Your payment transactions will appear here once you make a purchase.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+  
   const renderContent = () => {
     switch (activeTab) {
+      case "topics":
+        return renderUserTopics();
       case "subscriptions":
         return renderSubscriptions();
       case "settings":
         return renderSettings();
       case "payment":
-        return renderPaymentInfo();
+        return renderPaymentHistory();
       default:
-        return renderSubscriptions();
+        return renderUserTopics();
     }
   };
 
   return (
-        <RouteGuard requiresAuth={true} requiresSetup={false}>
-
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-yellow-100 flex relative">
-      {/* Mobile Overlay */}
-      {isMobile && sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={`${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } ${isMobile ? "fixed" : "relative"} ${
-          isMobile ? "w-64 z-50" : sidebarOpen ? "w-64" : "w-16"
-        } bg-white shadow-lg transition-all duration-300 flex-shrink-0 h-screen overflow-y-auto`}
-      >
-        <div className="p-4">
-          <div className="flex items-center justify-between">
-            <h1
-              className={`font-bold text-blue-800 ${
-                sidebarOpen ? "text-lg" : "text-xs"
-              } transition-all duration-300`}
-            >
-              {sidebarOpen ? "Dashboard" : "DB"}
-            </h1>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              {sidebarOpen ? (
-                <ChevronLeft className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
+    <RouteGuard>
+      <div className="flex h-screen bg-gray-50 font-sans">
+        {/* Sidebar */}
+        <aside
+          className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h1 className="text-2xl font-bold text-blue-600">Dashboard</h1>
+              {isMobile && (
+                <button onClick={() => setSidebarOpen(false)} className="text-gray-500 hover:text-gray-800">
+                  <X size={24} />
+                </button>
               )}
-            </button>
-          </div>
-        </div>
-
-        {/* Sidebar Navigation (Routes) */}
-        <nav className="mt-8 flex-1">
-          <div className="mb-4">
-            <h3 className={`px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider ${sidebarOpen ? "block" : "hidden"}`}>
-              Navigation
-            </h3>
-          </div>
-          {sidebarItems.map(({ id, label, icon: Icon, route }) => (
-            <button
-              key={id}
-              onClick={() => handleRouteNavigation(route)}
-              className={`w-full flex items-center px-4 py-3 text-left hover:bg-blue-50 transition-colors text-gray-700 hover:text-blue-700`}
-            >
-              <Icon
-                className={`${
-                  sidebarOpen ? "w-5 h-5 mr-3" : "w-6 h-6"
-                } transition-all duration-300`}
-              />
-              {sidebarOpen && <span className="font-medium">{label}</span>}
-            </button>
-          ))}
-        </nav>
-
-        {/* User section at bottom */}
-        <div className="p-4 border-t mt-auto">
-          <div
-            className={`flex items-center ${
-              sidebarOpen ? "justify-between" : "justify-center"
-            }`}
-          >
-            {sidebarOpen && (
-              <div className="flex items-center min-w-0 flex-1">
-                <User className="w-8 h-8 text-gray-600 mr-2 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-800 truncate">
-                    {user?.name}
-                  </p>
-                  <p className="text-xs text-gray-600 truncate">{user?.email}</p>
+            </div>
+            <nav className="flex-1 px-2 py-4 space-y-2">
+              {sidebarItems.map((item) => (
+                <a
+                  key={item.id}
+                  onClick={() => handleRouteNavigation(item.route)}
+                  className="flex items-center px-4 py-2 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
+                >
+                  <item.icon className="w-5 h-5 mr-3" />
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+            <div className="p-4 border-t">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                  {user?.name?.[0].toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-gray-800">{user?.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                 </div>
               </div>
-            )}
-            <button
-              onClick={handleLogout}
-              className={`${
-                sidebarOpen ? "p-2 ml-2" : "p-3"
-              } text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0`}
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto min-w-0">
-        {/* Header */}
-        <div className="bg-white shadow-sm border-b">
-          <div className="px-4 sm:px-6 py-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center min-w-0">
-                {/* Mobile menu button */}
-                <button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors mr-2"
-                >
-                  <Menu className="w-5 h-5" />
-                </button>
-                <h1 className="text-lg sm:text-2xl font-bold text-blue-800 truncate">
-                  Welcome back,{" "}
-                  <span className="text-yellow-600">{user?.name}</span>!
-                </h1>
+        {/* Main content */}
+        <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out md:ml-64">
+          {/* Top bar */}
+          <header className="flex items-center justify-between md:justify-end h-16 bg-white border-b px-4">
+            <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-600">
+              <Menu size={24} />
+            </button>
+            <div className="hidden md:flex items-center">
+              <span className="text-gray-700">Welcome, {user?.name}</span>
+            </div>
+          </header>
+          
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            {/* Tabs */}
+            <div className="mb-6">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-4 sm:space-x-8" aria-label="Tabs">
+                  {tabItems.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === tab.id
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <tab.icon className="w-5 h-5 mr-2" />
+                      {tab.label}
+                    </button>
+                  ))}
+                </nav>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="bg-white shadow-sm border-b">
-          <div className="px-4 sm:px-6">
-            <div className="flex space-x-4 sm:space-x-8 overflow-x-auto">
-              {tabItems.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  onClick={() => setActiveTab(id)}
-                  className={`flex items-center py-4 px-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                    activeTab === id
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <Icon className="w-4 h-4 mr-2 flex-shrink-0" />
-                  <span className="hidden sm:inline">{label}</span>
-                  <span className="sm:hidden">
-                    {id === "subscriptions" ? "Subs" : 
-                     id === "settings" ? "Settings" : "Payment"}
-                  </span>
-                </button>
-              ))}
+            
+            {/* Tab Content */}
+            <div>
+              {renderContent()}
             </div>
-          </div>
+          </main>
         </div>
-
-        {/* Content */}
-        <div className="p-4 sm:p-6">{renderContent()}</div>
       </div>
-    </div>
     </RouteGuard>
   );
 }

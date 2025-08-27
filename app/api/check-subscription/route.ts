@@ -1,5 +1,4 @@
-
-//app/api/check-subscription
+// app/api/check-subscription/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import pool from "../../../utils/database";
 
@@ -17,7 +16,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check for active subscription
+    // Check for active traditional subscription
     const subscriptionQuery = `
       SELECT 
         id,
@@ -30,12 +29,13 @@ export async function GET(req: NextRequest) {
         created_at,
         updated_at,
         is_active,
+        auto_renewal,
         CASE 
           WHEN status = 'active' AND is_active = true AND (next_renewal_date IS NULL OR next_renewal_date > CURRENT_TIMESTAMP) THEN true
           ELSE false
         END as is_currently_active
       FROM subscriptions 
-      WHERE user_id = $1 
+      WHERE user_id = $1 AND status = 'active' AND is_active = true
       ORDER BY created_at DESC 
       LIMIT 1
     `;
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
         success: true,
         hasSubscription: false,
         subscription: null,
-        message: "No subscription found",
+        message: "No active subscription found",
       });
     }
 
@@ -55,12 +55,14 @@ export async function GET(req: NextRequest) {
 
     // Check if subscription is expired
     let actualStatus = subscription.status;
+    let isActive = subscription.is_active;
+    
     if (
       subscription.next_renewal_date &&
-      new Date(subscription.next_renewal_date) < new Date() &&
-      !subscription.auto_renewal
+      new Date(subscription.next_renewal_date) < new Date()
     ) {
       actualStatus = "expired";
+      isActive = false;
 
       // Update the subscription status in database if it's expired
       await client.query(
@@ -69,26 +71,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Fetch user's selected topics
-    const topicsQuery = `
-      SELECT t.id, t.name, t.description, t.topic_type
-      FROM user_topics ut
-      JOIN topics t ON ut.topic_id = t.id
-      WHERE ut.user_id = $1
-      ORDER BY t.name
-    `;
-
-    const topicsResult = await client.query(topicsQuery, [user_id]);
-    const userTopics = topicsResult.rows.map(topic => topic.name);
-
     return NextResponse.json({
       success: true,
       hasSubscription: true,
       subscription: {
         ...subscription,
         status: actualStatus,
-        is_active: actualStatus === "active" && subscription.is_active,
-        topics: userTopics, // Add the topics array here
+        is_active: isActive,
       },
     });
   } catch (error) {
