@@ -1,10 +1,12 @@
 //app/components/userpreferences
-//app/components/userpreferences
+
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../contexts/AuthContext"; // Import the auth context
+import { useAuth } from "../contexts/AuthContext"; 
+import Header from "./Header";
+import Footer from "./Footer";
 
 const UserPreferences = () => {
   const [loading, setLoading] = useState(true);
@@ -193,6 +195,8 @@ const UserPreferences = () => {
   }
 
   return (
+    <>
+    <Header/>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
@@ -437,6 +441,8 @@ const UserPreferences = () => {
         </div>
       </div>
     </div>
+    <Footer/>
+    </>
   );
 };
 

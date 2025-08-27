@@ -2,6 +2,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import Header from './Header';
 
 const PricingSection = () => {
   const { isAuthenticated } = useAuth();
@@ -74,8 +75,9 @@ const PricingSection = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-12 px-4">
+      
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+        
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4">
             Choose Your <span className="text-yellow-500">Plan</span>

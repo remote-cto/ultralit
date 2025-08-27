@@ -4,6 +4,8 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
+import Header from "./Header";
+import Footer from "./Footer";
 
 declare global {
   interface Window {
@@ -440,7 +442,10 @@ const PaymentPage = () => {
   const modifiedPlans = getModifiedPlans();
 
   return (
+    <>
+     <Header/>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-12 px-4">
+     
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
@@ -744,6 +749,8 @@ const PaymentPage = () => {
         </div>
       </div>
     </div>
+    <Footer/>
+    </>
   );
 };
 
