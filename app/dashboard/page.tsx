@@ -126,7 +126,7 @@ export default function Dashboard() {
   // Updated tab items
   const tabItems = [
     { id: "topics", label: "My Topics", icon: BookOpen },
-    { id: "subscriptions", label: "Subscriptions", icon: Calendar },
+    // { id: "subscriptions", label: "Subscriptions", icon: Calendar },
     { id: "settings", label: "Settings", icon: Settings },
     { id: "payment", label: "Payment History", icon: CreditCard },
   ];
