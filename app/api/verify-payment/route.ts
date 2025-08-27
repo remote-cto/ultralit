@@ -10,7 +10,7 @@ interface PaymentVerificationRequest {
   razorpay_signature: string;
   user_id: string;
   plan_name: string;
-  amount: number;
+  amount: number | string; // Allow both number and string
   preferences?: UserPreferences;
   currency?: string;
   is_upgrade?: boolean;
@@ -51,12 +51,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       razorpay_signature,
       user_id,
       plan_name,
-      amount,
+      amount: rawAmount,
       preferences,
       currency = "INR",
       is_upgrade = false,
       previous_plan = null,
     } = body;
+
+    // Convert amount to number if it's a string
+    const amount = typeof rawAmount === 'string' ? parseFloat(rawAmount) : rawAmount;
 
     // Debug logging
     console.log("Payment verification request:", {
@@ -65,14 +68,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       razorpay_signature: razorpay_signature?.substring(0, 10) + "...",
       user_id,
       plan_name,
-      amount,
+      amount: typeof rawAmount === 'string' ? `${rawAmount} (converted to ${amount})` : amount,
       is_upgrade,
       previous_plan,
     });
 
-    // Validate required fields
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !user_id || !plan_name || typeof amount !== 'number') {
-      console.error("Missing required payment verification fields");
+    // Validate required fields with improved amount validation
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !user_id || !plan_name || 
+        (typeof amount !== 'number' || isNaN(amount))) {
+      console.error("Missing required payment verification fields", {
+        razorpay_order_id: !!razorpay_order_id,
+        razorpay_payment_id: !!razorpay_payment_id,
+        razorpay_signature: !!razorpay_signature,
+        user_id: !!user_id,
+        plan_name: !!plan_name,
+        amount: { value: rawAmount, type: typeof rawAmount, converted: amount, isValid: typeof amount === 'number' && !isNaN(amount) }
+      });
       return NextResponse.json(
         { success: false, error: "Missing required payment verification fields" },
         { status: 400 }

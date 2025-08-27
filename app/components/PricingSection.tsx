@@ -27,7 +27,7 @@ const PricingSection = () => {
     {
       name: "Students",
       price: "₹200",
-      amount: 500,
+      amount: 200,
       period: "/month",
       description: "Perfect for learners and aspiring professionals",
       icon: "🎓",
