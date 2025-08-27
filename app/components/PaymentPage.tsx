@@ -51,6 +51,52 @@ const PaymentPage = () => {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+  const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
+
+  // Load Razorpay script
+  useEffect(() => {
+    const loadRazorpayScript = () => {
+      return new Promise((resolve) => {
+        // Check if Razorpay is already loaded
+        if (window.Razorpay) {
+          setIsRazorpayLoaded(true);
+          resolve(true);
+          return;
+        }
+
+        // Check if script tag already exists
+        const existingScript = document.querySelector('script[src*="razorpay"]');
+        if (existingScript) {
+          existingScript.addEventListener('load', () => {
+            setIsRazorpayLoaded(true);
+            resolve(true);
+          });
+          return;
+        }
+
+        // Create and load the script
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        
+        script.onload = () => {
+          console.log('Razorpay script loaded successfully');
+          setIsRazorpayLoaded(true);
+          resolve(true);
+        };
+        
+        script.onerror = (error) => {
+          console.error('Failed to load Razorpay script:', error);
+          alert('Failed to load payment gateway. Please refresh the page and try again.');
+          resolve(false);
+        };
+
+        document.head.appendChild(script);
+      });
+    };
+
+    loadRazorpayScript();
+  }, []);
 
   useEffect(() => {
     // Check if user is authenticated
@@ -237,6 +283,13 @@ const PaymentPage = () => {
         return;
       }
 
+      // Check if Razorpay is loaded before proceeding with paid plans
+      if (!isRazorpayLoaded || !window.Razorpay) {
+        alert("Payment gateway is still loading. Please wait a moment and try again.");
+        setIsProcessing(prev => ({ ...prev, [plan.id]: false }));
+        return;
+      }
+
       // Handle paid plans with Razorpay
       console.log(
         "Creating order for plan:",
@@ -401,6 +454,16 @@ const PaymentPage = () => {
               : "Select the perfect plan for your learning journey"}
           </p>
           <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
+
+          {/* Show Razorpay loading status */}
+          {!isRazorpayLoaded && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 mr-2"></div>
+                <span className="text-yellow-800 text-sm">Loading payment gateway...</span>
+              </div>
+            </div>
+          )}
 
           {/* Show current subscription status if exists */}
           {subscriptionStatus && (
@@ -596,7 +659,7 @@ const PaymentPage = () => {
 
                 <button
                   onClick={() => handlePlanSelection(plan)}
-                  disabled={isProcessing[plan.id] || plan.disabled}
+                  disabled={isProcessing[plan.id] || plan.disabled || (!isRazorpayLoaded && !plan.is_trial && plan.amount > 0)}
                   className={`w-full bg-gradient-to-r ${
                     plan.buttonColor
                   } text-white py-4 rounded-full font-bold text-lg transition-all duration-300 hover:shadow-xl hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
@@ -607,6 +670,11 @@ const PaymentPage = () => {
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                       Processing...
+                    </div>
+                  ) : !isRazorpayLoaded && !plan.is_trial && plan.amount > 0 ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Loading Payment...
                     </div>
                   ) : plan.disabled ? (
                     subscriptionStatus?.plan_name === plan.name ? (
