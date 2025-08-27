@@ -43,7 +43,7 @@ const PaymentPage = () => {
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
   const [userPreferences, setUserPreferences] = useState<any>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState<{[key: number]: boolean}>({});
   const [subscriptionStatus, setSubscriptionStatus] =
     useState<Subscription | null>(null);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
@@ -189,9 +189,9 @@ const PaymentPage = () => {
   };
 
   const handlePlanSelection = async (plan: any) => {
-    if (isProcessing || plan.disabled) return;
+    if (isProcessing[plan.id] || plan.disabled) return;
 
-    setIsProcessing(true);
+    setIsProcessing(prev => ({ ...prev, [plan.id]: true }));
 
     try {
       // If user has active subscription, show confirmation for upgrade/change
@@ -201,7 +201,7 @@ const PaymentPage = () => {
             ? `Upgrade from ${subscriptionStatus.plan_name} (₹${subscriptionStatus.amount}) to ${plan.name} (₹${plan.amount})?`
             : `Change from ${subscriptionStatus?.plan_name} to ${plan.name}?`;
         if (!confirm(confirmMessage)) {
-          setIsProcessing(false);
+          setIsProcessing(prev => ({ ...prev, [plan.id]: false }));
           return;
         }
       }
@@ -317,12 +317,14 @@ const PaymentPage = () => {
           } catch (verifyError) {
             console.error("Payment verification error:", verifyError);
             alert("Payment verification failed. Please contact support.");
+          } finally {
+            setIsProcessing(prev => ({ ...prev, [plan.id]: false }));
           }
         },
         modal: {
           ondismiss: function () {
             console.log("Payment modal dismissed");
-            setIsProcessing(false);
+            setIsProcessing(prev => ({ ...prev, [plan.id]: false }));
           },
         },
         prefill: {
@@ -338,7 +340,7 @@ const PaymentPage = () => {
       razorpay.on("payment.failed", function (response: any) {
         console.error("Payment failed:", response.error);
         alert(`Payment failed: ${response.error.description}`);
-        setIsProcessing(false);
+        setIsProcessing(prev => ({ ...prev, [plan.id]: false }));
       });
 
       razorpay.open();
@@ -347,7 +349,7 @@ const PaymentPage = () => {
       alert("Something went wrong. Please try again.");
     } finally {
       if (plan.amount === 0 || plan.is_trial) {
-        setIsProcessing(false);
+        setIsProcessing(prev => ({ ...prev, [plan.id]: false }));
       }
     }
   };
@@ -594,14 +596,14 @@ const PaymentPage = () => {
 
                 <button
                   onClick={() => handlePlanSelection(plan)}
-                  disabled={isProcessing || plan.disabled}
+                  disabled={isProcessing[plan.id] || plan.disabled}
                   className={`w-full bg-gradient-to-r ${
                     plan.buttonColor
                   } text-white py-4 rounded-full font-bold text-lg transition-all duration-300 hover:shadow-xl hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
                     plan.disabled ? "from-gray-400 to-gray-500" : ""
                   }`}
                 >
-                  {isProcessing ? (
+                  {isProcessing[plan.id] ? (
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                       Processing...
@@ -656,7 +658,7 @@ const PaymentPage = () => {
         <div className="flex justify-between items-center mt-12">
           <button
             onClick={goBack}
-            disabled={isProcessing}
+            disabled={Object.values(isProcessing).some(Boolean)}
             className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ← {hasActiveSubscription ? "Back to Dashboard" : "Back to Topics"}
