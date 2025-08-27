@@ -67,6 +67,7 @@ export default function Dashboard() {
     "Faculty",
   ];
   const industryOptions = [
+    "IT",
     "Healthcare",
     "Finance / Banking",
     "Education",

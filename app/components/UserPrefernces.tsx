@@ -32,6 +32,7 @@ const UserPreferences = () => {
   ];
 
   const industryOptions = [
+    "IT",
     "Healthcare",
     "Finance / Banking",
     "Education",
