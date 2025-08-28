@@ -442,23 +442,7 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-                <div className="mt-4 pt-3 border-t">
-                  <button
-                    onClick={() => {
-                      // Navigate to topic content
-                      console.log("Navigate to topic:", topic.topic_id);
-                      // You can implement navigation here
-                    }}
-                    disabled={expired}
-                    className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                      expired
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-blue-50 text-blue-700 hover:bg-blue-100"
-                    }`}
-                  >
-                    {expired ? "Access Expired" : "Continue Learning"}
-                  </button>
-                </div>
+                
               </div>
             );
           })}
