@@ -2,9 +2,21 @@
 import React from "react";
 import FadeInUp from "./FadeInUp";
 import { Star, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../contexts/AuthContext";
 
 const HeroSection = () => {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+
+  const handleStartJourney = () => {
+    if (isAuthenticated) {
+      router.push("/dashboard");
+    } else {
+      router.push("/auth");
+    }
+  };
+
   return (
     <section className="relative min-h-screen bg-white flex items-center overflow-hidden">
       <div className="absolute inset-0"></div>
@@ -54,14 +66,14 @@ const HeroSection = () => {
 
           <FadeInUp delay={800}>
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <Link
-              href="/auth">
-              <button className="group bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white px-12 py-5 rounded-full font-bold text-xl transition-all duration-300 hover:shadow-[0_0_25px_rgba(255,215,0,0.6)] hover:scale-105 flex items-center gap-3 shadow-md">
+              <button 
+                onClick={handleStartJourney}
+                className="group bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white px-12 py-5 rounded-full font-bold text-xl transition-all duration-300 hover:shadow-[0_0_25px_rgba(255,215,0,0.6)] hover:scale-105 flex items-center gap-3 shadow-md"
+              >
                 <span className="text-2xl">🚀</span>
-                Start Your Journey
+                {isAuthenticated ? "Go to Dashboard" : "Start Your Journey"}
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
               </button>
-              </Link>
               <div className="text-center">
                 <span className="text-sm text-gray-500 block">
                   7-Day Free Trial
