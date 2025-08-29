@@ -185,15 +185,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           }
 
           // 5) Optional: Log into scheduler_log table (if it exists)
-          try {
-            await client.query(
-              `INSERT INTO scheduler_log(user_id, content_id, action, created_at)
-               VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
-              [row.user_id, row.content_id, 'sent']
-            );
-          } catch (logError) {
-            console.log("Scheduler log insert failed (table might not exist):", logError);
-          }
+          //try {
+            //await client.query(
+              //`INSERT INTO scheduler_log(user_id, content_id, action, created_at)
+               //VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
+              //[row.user_id, row.content_id, 'sent']
+            //);
+          //} catch (logError) {
+            //console.log("Scheduler log insert failed (table might not exist):", logError);
+          //}
 
           successCount++;
           console.log(`✓ Successfully delivered content to ${user.email}`);
