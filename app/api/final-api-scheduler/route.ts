@@ -50,7 +50,7 @@ interface SchedulerResponse {
 async function sendMail(user: User, content: Content): Promise<boolean> {
   try {
     // Replace this with actual email/WhatsApp/SMS API integration
-    console.log(`Sending content "${content.title}" to ${user.email}`);
+    console.log(`Sendinggggg content "${content.title}" to ${user.email}`);
     
     // Example: Email API call
     // const emailResponse = await fetch('your-email-api-endpoint', {
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
         // 2) Send the content
         const sent = await sendMail(user, content);
-        console.log(`Processing delivery for user ${user.email}, content "${content.title}"`);
+        console.log(`Processingggg delivery for user ${user.email}, content "${content.title}"`);
         if (sent) {
           // 3) Update current delivery as sent
           await client.query(
