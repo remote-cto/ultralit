@@ -163,6 +163,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             [row.delivery_id]
           );
 
+          console.log(`After the update clause`);
+
           // 4) Check if next day content exists and create next delivery
           const nextDayNumber = row.delivery_day + 1;
           const nextContentRes = await client.query(
@@ -170,7 +172,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
              WHERE topic_id = $1 AND day_number = $2`,
             [row.topic_id, nextDayNumber]
           );
-
+         console.log(`After the select clause`);
           if (nextContentRes.rows.length > 0) {
             // Insert next day delivery if content exists
             await client.query(
