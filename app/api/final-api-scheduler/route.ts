@@ -175,8 +175,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             // Insert next day delivery if content exists
             await client.query(
               `INSERT INTO user_content_delivery(user_id, topic_id, day_number, is_sent, created_at)
-               VALUES ($1, $2, $3, false, CURRENT_TIMESTAMP)
-               ON CONFLICT (user_id, topic_id, day_number) DO NOTHING`,
+               VALUES ($1, $2, $3, false, CURRENT_TIMESTAMP),               
               [row.user_id, row.topic_id, nextDayNumber]
             );
             
