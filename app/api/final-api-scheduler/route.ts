@@ -50,7 +50,7 @@ interface SchedulerResponse {
 async function sendMail(user: User, content: Content): Promise<boolean> {
   try {
     // Replace this with actual email/WhatsApp/SMS API integration
-    console.log(`Sendinggggg content "${content.title}" to ${user.email}`);
+    console.log(`Sending content "${content.title}" to ${user.email}`);
     
     // Example: Email API call
     // const emailResponse = await fetch('your-email-api-endpoint', {
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
         // 2) Send the content
         const sent = await sendMail(user, content);
-        console.log(`Processingggg delivery for user ${user.email}, content "${content.title}"`);
+        
         if (sent) {
           // 3) Update current delivery as sent
           await client.query(
@@ -172,12 +172,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
              WHERE topic_id = $1 AND day_number = $2`,
             [row.topic_id, nextDayNumber]
           );
-         console.log(`After the select clause`);
+          
+          console.log(`After the select clause`);
+          
           if (nextContentRes.rows.length > 0) {
             // Insert next day delivery if content exists
             await client.query(
               `INSERT INTO user_content_delivery(user_id, topic_id, day_number, is_sent, created_at)
-               VALUES ($1, $2, $3, false, CURRENT_TIMESTAMP),               
+               VALUES ($1, $2, $3, false, CURRENT_TIMESTAMP)`,
               [row.user_id, row.topic_id, nextDayNumber]
             );
             
@@ -187,15 +189,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           }
 
           // 5) Optional: Log into scheduler_log table (if it exists)
-          //try {
-            //await client.query(
-              //`INSERT INTO scheduler_log(user_id, content_id, action, created_at)
-               //VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
-              //[row.user_id, row.content_id, 'sent']
-            //);
-          //} catch (logError) {
-            //console.log("Scheduler log insert failed (table might not exist):", logError);
-          //}
+          // try {
+          //   await client.query(
+          //     `INSERT INTO scheduler_log(user_id, content_id, action, created_at)
+          //      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
+          //     [row.user_id, row.content_id, 'sent']
+          //   );
+          // } catch (logError) {
+          //   console.log("Scheduler log insert failed (table might not exist):", logError);
+          // }
 
           successCount++;
           console.log(`✓ Successfully delivered content to ${user.email}`);
