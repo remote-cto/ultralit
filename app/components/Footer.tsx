@@ -131,9 +131,14 @@ const Footer: React.FC<FooterProps> = ({ className = "" }) => {
           {/* Bottom Section */}
           <div className="border-t border-gray-200 pt-6">
             <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-              <p className="text-gray-600 text-sm text-center md:text-left">
-                © 2025 ByteDrop, All Rights Reserved.
-              </p>
+              <div className="flex flex-col items-center md:items-start space-y-2">
+                <p className="text-gray-500 text-sm text-center md:text-left">
+                  Made with ❤ in India
+                </p>
+                <p className="text-gray-600 text-sm text-center md:text-left">
+                  © 2025 ByteDrop, All Rights Reserved.
+                </p>
+              </div>
 
               <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6 text-sm">
                 <button
