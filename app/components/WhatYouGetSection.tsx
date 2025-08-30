@@ -34,7 +34,7 @@ const WhatYouGetSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <FadeInUp>
           <div className="text-center mb-16">
-            <h2 className="text-5xl md:text-6xl font-bold text-gray-800 mb-8">
+            <h2 className="text-3xl md:text-6xl font-bold text-gray-800 mb-4 md:mb-8">
               What You <span className="text-yellow-500">Get</span>
             </h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
@@ -65,16 +65,6 @@ const WhatYouGetSection = () => {
           ))}
         </div>
 
-        <FadeInUp delay={1000}>
-          <div className="mt-12 text-center">
-            <div className="inline-flex items-center space-x-4 px-8 py-4 bg-yellow-100 rounded-2xl border border-yellow-200">
-              <span className="text-gray-700 font-medium">Plus:</span>
-              <span className="text-gray-600">Role Packs content mapped to your day-to-day decisions</span>
-              <span className="text-gray-400">•</span>
-              <span className="text-gray-600">Language Options: English today; regional languages rolling out</span>
-            </div>
-          </div>
-        </FadeInUp>
       </div>
     </section>
   );

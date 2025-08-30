@@ -79,9 +79,9 @@ const PricingSection = () => {
       <div className="max-w-6xl mx-auto">
         
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4">
+          <h2 className="text-3xl md:text-6xl font-bold text-gray-800 mb-4 md:mb-8">
             Choose Your <span className="text-yellow-500">Plan</span>
-          </h1>
+          </h2>
           <p className="text-xl text-gray-600 mb-6">Select the perfect plan for your learning journey</p>
           <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
         </div>
