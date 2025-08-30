@@ -55,7 +55,7 @@ const RoleSpecificSection = () => {
                 <div className="relative">
                   <div className="flex items-center mb-6">
                     <span className="text-4xl mr-4">{item.icon}</span>
-                    <h4 className="text-2xl font-bold text-gray-800">
+                    <h4 className="text-xl lg:text-2xl font-bold text-gray-800">
                       {item.role}
                     </h4>
                   </div>

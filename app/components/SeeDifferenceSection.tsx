@@ -48,7 +48,7 @@ const SeeDifferenceSection = () => {
                   {benefit.icon}
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-4">
+                  <h3 className="text-xl lg:text-2xl font-bold text-gray-800 mb-4">
                     {benefit.title}
                   </h3>
                   <p className="text-gray-600 leading-relaxed">

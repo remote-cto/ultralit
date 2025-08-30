@@ -25,7 +25,7 @@ const WhyUltralitSection = () => {
 
               <FadeInUp delay={400}>
                 <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-8 rounded-3xl border border-yellow-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                  <p className="text-3xl font-bold text-black mb-4">
+                  <p className="text-xl lg:text-3xl font-bold text-black mb-4">
                     ByteDrop turns constant change into a daily habit of progress.
                   </p>
                 </div>
