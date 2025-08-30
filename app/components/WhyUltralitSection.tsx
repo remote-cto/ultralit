@@ -18,7 +18,7 @@ const WhyUltralitSection = () => {
 
             <div className="space-y-4 text-center">
               <FadeInUp delay={200}>
-                <p className="text-2xl text-gray-700 leading-relaxed">
+                <p className="text-xl lg:text-2xl text-gray-700 leading-relaxed">
                   The AI revolution isn't waiting. Every breakthrough reshapes
                   industries, creates opportunities, and demands new skills.
                 </p>
@@ -33,7 +33,7 @@ const WhyUltralitSection = () => {
               </FadeInUp>
 
               <FadeInUp delay={600}>
-                <p className="text-xl text-gray-600 leading-relaxed max-w-4xl mx-auto">
+                <p className="text-lg lg:text-xl text-gray-600 leading-relaxed max-w-4xl mx-auto">
                   We curate the most impactful AI and emerging tech updates ,
                   then personalize them for your role, your language, your
                   ambitions . No noise. No fluff. Just intelligence that moves

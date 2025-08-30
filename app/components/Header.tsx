@@ -1,10 +1,19 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Menu, X, Sparkles, User, LogOut, BookOpen, CreditCard, Settings } from "lucide-react";
+import {
+  Menu,
+  X,
+  Sparkles,
+  User,
+  LogOut,
+  BookOpen,
+  CreditCard,
+  Settings,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../contexts/AuthContext";
-
+import Image from "next/image";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -87,11 +96,17 @@ const Header = () => {
         <div className="flex justify-between items-center">
           {/* Logo */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
-              <Sparkles className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 lg:w-20 lg:h-20 rounded-xl overflow-hidden">
+              <Image
+                src="/images/Bytedrop.png"
+                alt="ByteDrop Logo"
+                width={80}
+                height={80}
+                className="w-full h-full object-cover"
+              />
             </div>
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className="text-3xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent hover:scale-105 transition-transform"
             >
               ByteDrop
@@ -135,7 +150,9 @@ const Header = () => {
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                     <User className="w-4 h-4 text-white" />
                   </div>
-                  <span className="max-w-32 truncate">{user?.name || "User"}</span>
+                  <span className="max-w-32 truncate">
+                    {user?.name || "User"}
+                  </span>
                 </button>
 
                 {showUserMenu && (
@@ -146,8 +163,12 @@ const Header = () => {
                           <User className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 truncate">{user?.name || "User"}</div>
-                          <div className="text-sm text-gray-500 truncate">{user?.email}</div>
+                          <div className="font-semibold text-gray-900 truncate">
+                            {user?.name || "User"}
+                          </div>
+                          <div className="text-sm text-gray-500 truncate">
+                            {user?.email}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -161,7 +182,7 @@ const Header = () => {
                         <BookOpen className="w-4 h-4 mr-3 text-gray-400" />
                         Explore Topics
                       </button>
-{/* 
+                      {/* 
                       <Link
                         href="/dashboard"
                         onClick={() => setShowUserMenu(false)}
@@ -223,7 +244,9 @@ const Header = () => {
               <button
                 onClick={handleExploreTopics}
                 className={`flex items-center w-full py-3 px-2 text-gray-700 hover:text-yellow-500 font-medium transition-colors rounded-lg hover:bg-gray-50 ${
-                  pathname === "/topic-selection" ? "text-yellow-500 bg-yellow-50" : ""
+                  pathname === "/topic-selection"
+                    ? "text-yellow-500 bg-yellow-50"
+                    : ""
                 }`}
               >
                 <BookOpen className="w-5 h-5 mr-3" />
@@ -251,8 +274,12 @@ const Header = () => {
                       <User className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 truncate">{user?.name || "User"}</div>
-                      <div className="text-sm text-gray-500 truncate">{user?.email}</div>
+                      <div className="font-semibold text-gray-900 truncate">
+                        {user?.name || "User"}
+                      </div>
+                      <div className="text-sm text-gray-500 truncate">
+                        {user?.email}
+                      </div>
                     </div>
                   </div>
 
