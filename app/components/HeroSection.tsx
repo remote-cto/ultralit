@@ -27,7 +27,7 @@ const HeroSection = () => {
             <div className="inline-flex items-center space-x-2 bg-yellow-100/80 backdrop-blur-md px-6 py-3 rounded-full border border-yellow-300 shadow-md mb-8">
               <Star className="w-5 h-5 text-yellow-500" />
               <span className="text-yellow-700 font-semibold">
-                Your AI Edge, Delivered Daily
+                Your AI-Powered Continuous Micro-Learning Companion
               </span>
               <Star className="w-5 h-5 text-yellow-500" />
             </div>
@@ -40,11 +40,11 @@ const HeroSection = () => {
               </span>
               <br />
               <span className="text-gray-800 text-4xl md:text-6xl">
-                Master Tomorrow's Technology
+                Become a Better Version
               </span>
               <br />
               <span className="text-gray-500 text-3xl md:text-5xl font-medium">
-                Today
+                of Yourself
               </span>
             </h1>
           </FadeInUp>
@@ -52,14 +52,14 @@ const HeroSection = () => {
           <FadeInUp delay={600}>
             <div className="space-y-4 mb-12">
               <p className="text-2xl md:text-3xl text-gray-700 font-medium">
-                <span className="text-yellow-500 font-bold">Bite-Sized</span> •{" "}
-                <span className="text-yellow-500 font-bold">Role-Specific</span>{" "}
-                • <span className="text-yellow-500 font-bold">Actionable</span>
+                <span className="text-yellow-500 font-bold">Bite-sized</span> •{" "}
+                <span className="text-yellow-500 font-bold">Personalized</span>{" "}
+                • <span className="text-yellow-500 font-bold">Action-oriented</span>
               </p>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                Transform complex AI breakthroughs into personalized insights
-                that accelerate your career, delivered seamlessly to your
-                WhatsApp or email.
+                One clear, actionable Byte at a time. Transform your potential
+                through personalized micro-learning experiences designed to fit
+                seamlessly into your daily routine.
               </p>
             </div>
           </FadeInUp>

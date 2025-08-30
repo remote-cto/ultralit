@@ -5,27 +5,27 @@ const WhatYouGetSection = () => {
   const features = [
     {
       icon: <Sparkles className="w-8 h-8 text-yellow-600" />,
-      title: "AI Intelligence Decoded",
+      title: "Daily ByteDrops",
       description:
-        "Complex breakthroughs simplified into actionable knowledge you can apply immediately"
+        "Crisp explainers with examples and a ready-to-use action"
     },
     {
       icon: <Target className="w-8 h-8 text-yellow-600" />,
-      title: "Emerging Tech Radar",
+      title: "Prompt & Checklist Packs",
       description:
-        "Quantum computing, IoT, blockchain innovations — and their real impact on your industry"
+        "Turn ideas into work you can ship"
     },
     {
       icon: <Award className="w-8 h-8 text-yellow-600" />,
-      title: "Industry Deep Dives",
+      title: "Weekly Recap",
       description:
-        "Sector-specific innovations that are reshaping your professional landscape"
+        "Catch up fast; never fall behind"
     },
     {
       icon: <ArrowRight className="w-8 h-8 text-yellow-600" />,
-      title: "Strategic Action Steps",
+      title: "Skill Graph",
       description:
-        "Transform today's insights into tomorrow's competitive advantages"
+        "See momentum, not just scores"
     }
   ];
 
@@ -35,7 +35,7 @@ const WhatYouGetSection = () => {
         <FadeInUp>
           <div className="text-center mb-16">
             <h2 className="text-5xl md:text-6xl font-bold text-gray-800 mb-8">
-              What You <span className="text-yellow-500">Receive</span>
+              What You <span className="text-yellow-500">Get</span>
             </h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -64,6 +64,17 @@ const WhatYouGetSection = () => {
             </FadeInUp>
           ))}
         </div>
+
+        <FadeInUp delay={1000}>
+          <div className="mt-12 text-center">
+            <div className="inline-flex items-center space-x-4 px-8 py-4 bg-yellow-100 rounded-2xl border border-yellow-200">
+              <span className="text-gray-700 font-medium">Plus:</span>
+              <span className="text-gray-600">Role Packs content mapped to your day-to-day decisions</span>
+              <span className="text-gray-400">•</span>
+              <span className="text-gray-600">Language Options: English today; regional languages rolling out</span>
+            </div>
+          </div>
+        </FadeInUp>
       </div>
     </section>
   );

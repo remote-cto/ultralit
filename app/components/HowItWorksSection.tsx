@@ -4,29 +4,29 @@ const HowItWorksSection = () => {
   const steps = [
     {
       number: 1,
-      title: "Define Your Profile",
+      title: "Tell us your goals",
       description:
-        "Student, Professional, Executive, Specialist — we adapt to you",
+        "Pick your role (Student, Professional, Leader, Educator) and outcomes you care about.",
       icon: "🎯",
     },
     {
       number: 2,
-      title: "Select Your Topic of Interest",
+      title: "Choose your BytePaths",
       description:
-        "From AI to Climate Tech, Fintech to Cybersecurity — choose the topics that matter to you most. We’ll tailor every update to your curiosity and goals.",
+        "Focused tracks (e.g., AI for Work, Data Basics, Cybersecurity Essentials, Healthcare AI, Hospitality Ops, Cloud Productivity).",
       icon: "📚",
     },
     {
       number: 3,
-      title: "Sign Up Instantly",
-      description: "Begin your 7-day premium trial with zero commitment",
+      title: "Learn → Do → Prove",
+      description: "Each Byte includes: explainer → real example → one action. Micro-quizzes reinforce learning; your Skill Graph shows progress over time.",
       icon: "✨",
     },
     {
       number: 4,
-      title: "Receive Personalized Intelligence",
+      title: "Keep your streak",
       description:
-        "Daily or weekly insights crafted for your success and tailored to your growth goals across multiple aspects of your career or studies.",
+        "Daily or weekly cadence. Nudge at the time you prefer. Consistency, made easy.",
       icon: "🧠",
     },
   ];
@@ -37,11 +37,11 @@ const HowItWorksSection = () => {
         <FadeInUp>
           <div className="text-center mb-16">
             <h2 className="text-5xl md:text-6xl font-bold text-gray-800 mb-8">
-              How It <span className="text-yellow-500">Works</span>
+              How ByteDrop <span className="text-yellow-500">Works</span>
             </h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Three simple steps to transform your relationship with technology
+              Four simple steps to master any skill with bite-sized learning
             </p>
           </div>
         </FadeInUp>

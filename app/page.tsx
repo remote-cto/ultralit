@@ -11,6 +11,8 @@ import RoleSpecificSection from './components/RoleSpecificSection';
 
 
 import WhyUltralitSection from "./components/WhyUltralitSection";
+import FAQSection from "./components/FAQSection";
+import SeeDifferenceSection from "./components/SeeDifferenceSection";
 
 
 export default function Home() {
@@ -20,11 +22,13 @@ export default function Home() {
       <HeroSection />
       <WhyUltralitSection />
       <HowItWorksSection />
-      <RoleSpecificSection />
       <WhatYouGetSection />
+      <RoleSpecificSection />
       <WhyItWorksSection />
+      <SeeDifferenceSection/>
       <PricingSection />
-      <CTASection />
+      {/* <CTASection /> */}
+      <FAQSection/>
       <Footer />
 
    </div>

@@ -1,12 +1,13 @@
-import { ArrowRight, CheckCircle, Globe, Target } from "lucide-react";
+import { ArrowRight, CheckCircle, Globe, Target, TrendingUp, Shield } from "lucide-react";
 import FadeInUp from "./FadeInUp";
 
 const WhyItWorksSection = () => {
   const benefits = [
-    { icon: <CheckCircle className="w-8 h-8" />, title: "Zero Fluff", description: "Essential insights in just 2-3 minutes of reading" },
-    { icon: <Target className="w-8 h-8" />, title: "Hyper-Personalized", description: "Content that speaks directly to your professional reality" },
-    { icon: <Globe className="w-8 h-8" />, title: "Global Perspective", description: "Learn in your preferred language and cultural context" },
-    { icon: <ArrowRight className="w-8 h-8" />, title: "Action-Oriented", description: "Every insight includes clear next steps for implementation" }
+    { icon: <CheckCircle className="w-8 h-8" />, title: "Zero Fluff", description: "Clarity over jargon, always" },
+    { icon: <Target className="w-8 h-8" />, title: "Adaptive", description: "Adjusts to your pace and performance" },
+    { icon: <ArrowRight className="w-8 h-8" />, title: "Action-Oriented", description: "Every lesson ends with a concrete next step" },
+    { icon: <TrendingUp className="w-8 h-8" />, title: "Measurable", description: "Track capability growth with the Skill Graph" },
+    { icon: <Shield className="w-8 h-8" />, title: "Privacy-First", description: "Your data personalizes learning—never sold" }
   ];
 
   return (
@@ -15,7 +16,7 @@ const WhyItWorksSection = () => {
         <FadeInUp>
           <div className="text-center mb-16">
             <h2 className="text-5xl md:text-6xl font-bold text-gray-800 mb-8">
-              Why It <span className="text-yellow-500">Works</span>
+              Why ByteDrop <span className="text-yellow-500">Works</span>
             </h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -24,16 +25,18 @@ const WhyItWorksSection = () => {
           </div>
         </FadeInUp>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
           {benefits.map((item, index) => (
             <FadeInUp key={index} delay={200 + index * 150}>
-              <div className="group text-center p-8 bg-white rounded-3xl border border-yellow-200 hover:border-yellow-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-105">
-                <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center mx-auto mb-6 text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  {item.icon}
+              <div className="group text-center p-8 bg-white rounded-3xl border border-yellow-200 hover:border-yellow-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-105 h-80 w-full flex flex-col justify-between">
+                <div className="flex flex-col items-center flex-grow">
+                  <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center mb-6 text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    {item.icon}
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-4">
+                    {item.title}
+                  </h3>
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-4">
-                  {item.title}
-                </h3>
                 <p className="text-gray-600 leading-relaxed">{item.description}</p>
               </div>
             </FadeInUp>

@@ -4,38 +4,26 @@ const RoleSpecificSection = () => {
   const roles = [
     {
       role: "Students",
-      benefit: "Master AI concepts and future-proof your career trajectory",
+      benefit: "Job-ready skills without overwhelm",
       color: "from-blue-400 to-cyan-400",
       icon: "🎓"
     },
     {
       role: "Professionals",
-      benefit: "Discover AI applications that revolutionize your daily workflow",
+      benefit: "Workflows, prompts, and tools that save hours",
       color: "from-green-400 to-emerald-400",
       icon: "💼"
     },
     {
-      role: "Executives",
-      benefit: "Access strategic insights for competitive AI adoption",
+      role: "Leaders/Founders",
+      benefit: "Strategy-grade clarity in minutes",
       color: "from-purple-400 to-violet-400",
       icon: "👑"
     },
     {
-      role: "Healthcare",
-      benefit: "Explore AI breakthroughs in diagnostics and patient care",
+      role: "Educators/Teams",
+      benefit: "Micro-curricula, engagement, and analytics",
       color: "from-red-400 to-rose-400",
-      icon: "⚕️"
-    },
-    {
-      role: "Engineers",
-      benefit: "Stay current with cutting-edge tools and frameworks",
-      color: "from-orange-400 to-amber-400",
-      icon: "⚙️"
-    },
-    {
-      role: "Educators",
-      benefit: "Integrate AI innovations into learning methodologies",
-      color: "from-teal-400 to-cyan-400",
       icon: "📚"
     }
   ];
@@ -46,8 +34,8 @@ const RoleSpecificSection = () => {
         <FadeInUp>
           <div className="text-center mb-16">
             <h2 className="text-5xl md:text-6xl font-bold text-gray-800 mb-8">
-              Tailored for{" "}
-              <span className="text-yellow-500">Your Role</span>
+              Built for{" "}
+              <span className="text-yellow-500">Real People</span>
             </h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -57,7 +45,7 @@ const RoleSpecificSection = () => {
           </div>
         </FadeInUp>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8">
           {roles.map((item, index) => (
             <FadeInUp key={index} delay={200 + index * 100}>
               <div className="group relative bg-yellow-50 p-8 rounded-3xl border border-yellow-200 hover:border-yellow-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-105 overflow-hidden">
