@@ -21,6 +21,11 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
+  PlayCircle,
+  FileText,
+  ChevronRight,
+  ChevronDown,
+  Eye,
 } from "lucide-react";
 import RouteGuard from "../components/RouteGuard";
 
@@ -37,6 +42,44 @@ interface UserTopic {
   payment_id?: string;
   topic_description?: string;
   topic_type?: string;
+}
+
+interface TopicContent {
+  id: number;
+  topic_id: number;
+  day_number: number;
+  title: string;
+  description: string | null;
+  content_text: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface UserContentProgress {
+  delivery_id: number;
+  day_number: number;
+  is_sent: boolean;
+  delivered_on: string | null;
+  created_at: string;
+}
+
+interface TopicContentData {
+  topic_id: number;
+  topic_name: string;
+  content: TopicContent[];
+  user_progress: UserContentProgress[];
+  total_days: number;
+  current_day: number;
+  next_delivery_date: string | null;
+}
+
+interface TopicSummary {
+  topic_id: number;
+  topic_name: string;
+  total_content_days: number;
+  current_day: number;
+  delivered_count: number;
+  pending_count: number;
 }
 
 interface Subscription {
@@ -80,6 +123,8 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("topics");
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [userTopics, setUserTopics] = useState<UserTopic[]>([]);
+  const [topicContentData, setTopicContentData] = useState<{ [key: number]: TopicContentData }>({});
+  const [topicsSummary, setTopicsSummary] = useState<TopicSummary[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
   const [preferences, setPreferences] = useState<Preferences | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,6 +134,9 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedTopics, setExpandedTopics] = useState<{ [key: number]: boolean }>({});
+  const [selectedContent, setSelectedContent] = useState<TopicContent | null>(null);
+  const [showContentModal, setShowContentModal] = useState(false);
 
   // Options for preferences
   const roleOptions = [
@@ -126,7 +174,7 @@ export default function Dashboard() {
   // Updated tab items
   const tabItems = [
     { id: "topics", label: "My Topics", icon: BookOpen },
-    // { id: "subscriptions", label: "Subscriptions", icon: Calendar },
+    { id: "content", label: "Content Library", icon: FileText },
     { id: "settings", label: "Settings", icon: Settings },
     { id: "payment", label: "Payment History", icon: CreditCard },
   ];
@@ -164,10 +212,11 @@ export default function Dashboard() {
           fetch(`/api/get-user-topics?user_id=${user?.id}`),
           fetch(`/api/check-subscription?user_id=${user?.id}`),
           fetch(`/api/get-user-preferences?user_id=${user?.id}`),
-          fetch(`/api/verify-payment?user_id=${user?.id}`), // For payment history
+          fetch(`/api/verify-payment?user_id=${user?.id}`), 
+          fetch(`/api/get-topic-content?user_id=${user?.id}`), 
         ];
 
-        const [topicsRes, subRes, prefRes, paymentRes] = await Promise.all(fetchPromises);
+        const [topicsRes, subRes, prefRes, paymentRes, contentRes] = await Promise.all(fetchPromises);
 
         // Handle user topics
         try {
@@ -226,6 +275,19 @@ export default function Dashboard() {
         } catch (paymentError) {
           console.log("No payment history available:", paymentError);
         }
+
+        // Handle topic content summary
+        try {
+          if (contentRes.ok) {
+            const contentData = await contentRes.json();
+            console.log("Content summary response:", contentData);
+            if (contentData.success && contentData.data) {
+              setTopicsSummary(contentData.data.user_topics_summary || []);
+            }
+          }
+        } catch (contentError) {
+          console.log("No content summary available:", contentError);
+        }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
         setError("Failed to load dashboard data. Please try refreshing the page.");
@@ -238,6 +300,26 @@ export default function Dashboard() {
       fetchData();
     }
   }, [isAuthenticated, user?.id, router]);
+
+  // Fetch detailed content for a specific topic
+  const fetchTopicContent = async (topicId: number) => {
+    try {
+      console.log("Fetching detailed content for topic:", topicId);
+      const response = await fetch(`/api/get-topic-content?user_id=${user?.id}&topic_id=${topicId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setTopicContentData(prev => ({
+          ...prev,
+          [topicId]: data.data
+        }));
+      } else {
+        console.error("Failed to fetch topic content:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching topic content:", error);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -288,6 +370,23 @@ export default function Dashboard() {
     setEditingPreferences(false);
   };
 
+  const toggleTopicExpansion = (topicId: number) => {
+    setExpandedTopics(prev => ({
+      ...prev,
+      [topicId]: !prev[topicId]
+    }));
+    
+    // Fetch content if expanding and not already loaded
+    if (!expandedTopics[topicId] && !topicContentData[topicId]) {
+      fetchTopicContent(topicId);
+    }
+  };
+
+  const handleViewContent = (content: TopicContent) => {
+    setSelectedContent(content);
+    setShowContentModal(true);
+  };
+
   // Helper function to format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
@@ -329,6 +428,12 @@ export default function Dashboard() {
         return 'bg-gray-100 text-gray-700';
     }
   };
+
+  // Helper function to get progress percentage
+  const getProgressPercentage = (delivered: number, total: number) => {
+    if (total === 0) return 0;
+    return Math.round((delivered / total) * 100);
+  };
   
   if (!isAuthenticated || loading) {
     return (
@@ -363,8 +468,45 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  // Content Modal Component
+  const ContentModal = () => {
+    if (!showContentModal || !selectedContent) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="flex justify-between items-center p-6 border-b">
+            <h3 className="text-xl font-semibold text-gray-800">
+              Day {selectedContent.day_number}: {selectedContent.title}
+            </h3>
+            <button
+              onClick={() => setShowContentModal(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          <div className="p-6">
+            {selectedContent.description && (
+              <div className="mb-4">
+                <h4 className="font-medium text-gray-700 mb-2">Description</h4>
+                <p className="text-gray-600 text-sm">{selectedContent.description}</p>
+              </div>
+            )}
+            <div>
+              <h4 className="font-medium text-gray-700 mb-2">Content</h4>
+              <div className="prose prose-sm max-w-none">
+                <p className="text-gray-800 whitespace-pre-wrap">{selectedContent.content_text}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
   
-  // Render user topics
+  // Render user topics with enhanced content display
   const renderUserTopics = () => (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -381,11 +523,14 @@ export default function Dashboard() {
       </div>
       {userTopics.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {userTopics.map((topic,index) => {
+          {userTopics.map((topic, index) => {
             const expired = isTopicExpired(topic.expires_at);
+            const summary = topicsSummary.find(s => s.topic_id === topic.topic_id);
+            const progressPercentage = summary ? getProgressPercentage(summary.delivered_count, summary.total_content_days) : 0;
+            
             return (
               <div
-                 key={`${topic.topic_id}-${index}`}
+                key={`${topic.topic_id}-${index}`}
                 className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border-l-4 border-blue-500 hover:shadow-xl transition-shadow"
               >
                 <div className="flex justify-between items-start mb-3">
@@ -402,11 +547,32 @@ export default function Dashboard() {
                     {expired ? "Expired" : topic.status}
                   </span>
                 </div>
+                
                 {topic.topic_description && (
                   <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                     {topic.topic_description}
                   </p>
                 )}
+
+                {/* Progress Bar */}
+                {/* {summary && (
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                      <span>Progress</span>
+                      <span>{summary.delivered_count}/{summary.total_content_days} days</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${progressPercentage}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {progressPercentage}% completed
+                    </div>
+                  </div>
+                )} */}
+
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex justify-between">
                     <span>Plan:</span>
@@ -442,7 +608,20 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-                
+
+                {/* View Content Button */}
+                {!expired && (
+                  <button
+                    onClick={() => {
+                      setActiveTab("content");
+                      toggleTopicExpansion(topic.topic_id);
+                    }}
+                    className="w-full mt-4 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    View Content
+                  </button>
+                )}
               </div>
             );
           })}
@@ -461,6 +640,204 @@ export default function Dashboard() {
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Explore Topics
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  // Render content library with day-wise content
+  const renderContentLibrary = () => (
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+        <FileText className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
+        Content Library
+      </h2>
+      
+      {topicsSummary.length > 0 ? (
+        <div className="space-y-4">
+          {topicsSummary.map((summary) => {
+            const isExpanded = expandedTopics[summary.topic_id];
+            const contentData = topicContentData[summary.topic_id];
+            const progressPercentage = getProgressPercentage(summary.delivered_count, summary.total_content_days);
+            
+            return (
+              <div key={summary.topic_id} className="bg-white rounded-xl shadow-lg overflow-hidden">
+                {/* Topic Header */}
+                <div 
+                  className="p-4 sm:p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => toggleTopicExpansion(summary.topic_id)}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                        {summary.topic_name}
+                      </h3>
+                      
+                      {/* Progress Stats */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-3">
+                        {/* <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">{summary.total_content_days}</div>
+                          <div className="text-xs text-gray-500">Total Days</div>
+                        </div> */}
+                        {/* <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">{summary.delivered_count}</div>
+                          <div className="text-xs text-gray-500">Delivered</div>
+                        </div> */}
+                        {/* <div className="text-center">
+                          <div className="text-2xl font-bold text-yellow-600">{summary.pending_count}</div>
+                          <div className="text-xs text-gray-500">Pending</div>
+                        </div> */}
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">{summary.current_day}</div>
+                          <div className="text-xs text-gray-500">Current Day</div>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      {/* <div className="mb-2">
+                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <span>Learning Progress</span>
+                          <span>{progressPercentage}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${progressPercentage}%` }}
+                          ></div>
+                        </div>
+                      </div> */}
+                    </div>
+                    
+                    <div className="ml-4">
+                      {isExpanded ? (
+                        <ChevronDown className="w-6 h-6 text-gray-400" />
+                      ) : (
+                        <ChevronRight className="w-6 h-6 text-gray-400" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded Content */}
+                {isExpanded && (
+                  <div className="border-t bg-gray-50">
+                    {contentData ? (
+                      <div className="p-4 sm:p-6">
+                        <h4 className="text-md font-semibold text-gray-800 mb-4">
+                          Content Schedule ({contentData.content.length} days)
+                        </h4>
+                        
+                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                          {contentData.content.map((content) => {
+                            const progressItem = contentData.user_progress.find(
+                              p => p.day_number === content.day_number
+                            );
+                            const isDelivered = progressItem?.is_sent || false;
+                            const isScheduled = !!progressItem && !progressItem.is_sent;
+                            
+                            return (
+                              <div
+                                key={content.id}
+                                className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                                  isDelivered 
+                                    ? 'bg-green-50 border-green-200' 
+                                    : isScheduled 
+                                    ? 'bg-yellow-50 border-yellow-200' 
+                                    : 'bg-white border-gray-200'
+                                }`}
+                              >
+                                <div className="flex items-center space-x-3 flex-1">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                                    isDelivered 
+                                      ? 'bg-green-500 text-white' 
+                                      : isScheduled 
+                                      ? 'bg-yellow-500 text-white' 
+                                      : 'bg-gray-300 text-gray-600'
+                                  }`}>
+                                    {content.day_number}
+                                  </div>
+                                  
+                                  <div className="flex-1 min-w-0">
+                                    <h5 className="font-medium text-gray-800 truncate">
+                                      {content.title}
+                                    </h5>
+                                    {content.description && (
+                                      <p className="text-sm text-gray-600 truncate">
+                                        {content.description}
+                                      </p>
+                                    )}
+                                    {progressItem?.delivered_on && (
+                                      <p className="text-xs text-gray-500">
+                                        Delivered: {formatDate(progressItem.delivered_on)}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                  {isDelivered && (
+                                    <CheckCircle className="w-5 h-5 text-green-500" />
+                                  )}
+                                  {isScheduled && (
+                                    <Clock className="w-5 h-5 text-yellow-500" />
+                                  )}
+                                  
+                                  {/* View Content Button - only show for delivered content */}
+                                  {isDelivered && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewContent(content);
+                                      }}
+                                      className="text-blue-600 hover:text-blue-800 p-1"
+                                      title="View content"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Next Delivery Info */}
+                        {contentData.next_delivery_date && (
+                          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                            <div className="flex items-center text-sm text-blue-800">
+                              <Clock className="w-4 h-4 mr-2" />
+                              Next content scheduled for delivery
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-4 sm:p-6 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p className="text-gray-600">Loading content...</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center">
+          <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">
+            No content available
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Purchase topics to access their content library and start your learning journey.
+          </p>
+          <button
+            onClick={() => router.push("/topic-selection")}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Browse Topics
           </button>
         </div>
       )}
@@ -847,8 +1224,8 @@ export default function Dashboard() {
     switch (activeTab) {
       case "topics":
         return renderUserTopics();
-      case "subscriptions":
-        return renderSubscriptions();
+      case "content":
+        return renderContentLibrary();
       case "settings":
         return renderSettings();
       case "payment":
@@ -950,7 +1327,8 @@ export default function Dashboard() {
             </div>
           </main>
         </div>
-      </div>
+        </div>
+      {/* </div> */}
     </RouteGuard>
   );
 }
