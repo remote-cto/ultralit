@@ -5,6 +5,8 @@ import TermsModal from "./TermsModal";
 import PrivacyModal from "./Privacy";
 import RefundModal from "./Refund";
 import ShippingModal from "./Shipping";
+import Image from "next/image";
+import Link from "next/link";
 
 interface FooterProps {
   className?: string;
@@ -42,15 +44,23 @@ const Footer: React.FC<FooterProps> = ({ className = "" }) => {
         <div className="max-w-7xl mx-auto">
           {/* Main Footer Content */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
-            {/* Same logo as Header */}
             <div className="flex items-center mb-6 lg:mb-0">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center shadow-md">
-                  <Sparkles className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 lg:w-20 lg:h-20 rounded-xl overflow-hidden">
+                  <Image
+                    src="/images/Bytedrop.png"
+                    alt="ByteDrop Logo"
+                    width={80}
+                    height={80}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <span className="text-3xl font-bold text-yellow-500">
+                <Link
+                  href="/"
+                  className="text-3xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent hover:scale-105 transition-transform"
+                >
                   ByteDrop
-                </span>
+                </Link>
               </div>
             </div>
 
@@ -169,13 +179,13 @@ const Footer: React.FC<FooterProps> = ({ className = "" }) => {
       />
 
       {/* Refund Modal */}
-      <RefundModal 
+      <RefundModal
         isOpen={isRefundModalOpen}
         onClose={() => setIsRefundModalOpen(false)}
       />
 
       {/* Shipping Modal */}
-      <ShippingModal 
+      <ShippingModal
         isOpen={isShippingModalOpen}
         onClose={() => setIsShippingModalOpen(false)}
       />
