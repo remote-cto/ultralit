@@ -98,7 +98,7 @@ const Header = () => {
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 lg:w-20 lg:h-20 rounded-xl overflow-hidden">
               <Image
-                src="/images/Bytedrop.png"
+                src="/images/ByteDrop.png"
                 alt="ByteDrop Logo"
                 width={80}
                 height={80}
