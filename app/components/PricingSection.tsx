@@ -2,7 +2,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
-import Header from './Header';
+import toast, { Toaster } from 'react-hot-toast';
 
 const PricingSection = () => {
   const { isAuthenticated } = useAuth();
@@ -67,15 +67,13 @@ const PricingSection = () => {
       return;
     }
     
-    // If authenticated, you can add future functionality here
-    console.log('User is authenticated, selected plan:', plan.name);
+
+    toast.success(`Visit the Explore Topics page to select your plan.`);
   };
-
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-12 px-4">
-      
+       <Toaster position="top-right" reverseOrder={false} />
       <div className="max-w-6xl mx-auto">
         
         <div className="text-center mb-12">
@@ -87,13 +85,13 @@ const PricingSection = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-8 items-stretch">
           {plans.map((plan, index) => (
             <div
               key={index}
-              className={`relative bg-white rounded-3xl p-8 border transition-all duration-500 hover:scale-105 ${
+              className={`relative bg-white rounded-3xl p-8 border transition-all duration-500 hover:scale-105 flex flex-col h-full ${
                 plan.popular
-                  ? "border-yellow-400 shadow-xl shadow-yellow-200 scale-105"
+                  ? "border-yellow-400 shadow-xl shadow-yellow-200"
                   : "border-yellow-200 shadow-lg"
               }`}
             >
@@ -103,7 +101,7 @@ const PricingSection = () => {
                 </div>
               )}
 
-              <div className="text-center">
+              <div className="text-center flex-grow flex flex-col">
                 <div className="w-16 h-16 mx-auto mb-6 flex items-center justify-center bg-yellow-100 rounded-2xl text-4xl">
                   {plan.icon}
                 </div>
@@ -121,7 +119,7 @@ const PricingSection = () => {
                 </p>
                 
                 {/* Features */}
-                <div className="mb-8 text-left">
+                <div className="mb-8 text-left flex-grow">
                   <h4 className="font-semibold text-gray-800 mb-3 text-center">What's included:</h4>
                   <ul className="space-y-2">
                     {plan.features.map((feature, idx) => (
@@ -137,7 +135,7 @@ const PricingSection = () => {
 
                 <button
                   onClick={() => handlePlanSelection(plan)}
-                  className={`w-full bg-gradient-to-r ${plan.buttonColor} text-white py-4 rounded-full font-bold text-lg transition-all duration-300 hover:shadow-xl hover:scale-105 shadow-lg`}
+                  className={`w-full bg-gradient-to-r ${plan.buttonColor} text-white py-4 rounded-full font-bold text-lg transition-all duration-300 hover:shadow-xl hover:scale-105 shadow-lg mt-auto`}
                 >
                   {plan.name === "Free Trial" ? "Start Free Trial" : "Choose Plan"}
                 </button>
