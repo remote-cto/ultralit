@@ -1,3 +1,5 @@
+// app/api/fetch-topics/route.ts - Updated for Per-Topic Pricing
+
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '../../../utils/database';
 
@@ -19,26 +21,27 @@ export async function GET(request: NextRequest) {
       isTrending,
     });
 
-    // Validate query parameters
+    // Validate query parameters (your existing validation is good)
     if (domainId && isNaN(parseInt(domainId))) {
-      console.error("Invalid domain_id parameter");
-      return NextResponse.json(
-        { success: false, error: "Invalid domain_id parameter" },
-        { status: 400 }
-      );
+        return NextResponse.json(
+            { success: false, error: "Invalid domain_id parameter" },
+            { status: 400 }
+        );
     }
-
     if (categoryId && isNaN(parseInt(categoryId))) {
-      console.error("Invalid category_id parameter");
-      return NextResponse.json(
-        { success: false, error: "Invalid category_id parameter" },
-        { status: 400 }
-      );
+        return NextResponse.json(
+            { success: false, error: "Invalid category_id parameter" },
+            { status: 400 }
+        );
     }
 
+    // --- THIS IS THE ONLY CHANGE NEEDED ---
+    // We add price, currency, and access_duration_days to the SELECT statement.
     let query = `
-      SELECT id, name, description, topic_type, domain_id, category_id, 
-             is_microlearning, is_trending
+      SELECT 
+        id, name, description, topic_type, domain_id, category_id, 
+        is_microlearning, is_trending, 
+        price, currency, access_duration_days 
       FROM topics 
       WHERE is_active = true
     `;
@@ -71,7 +74,7 @@ export async function GET(request: NextRequest) {
     console.log("Executing topics query with parameters:", queryParams);
     const result = await client.query(query, queryParams);
     
-    console.log(`Successfully fetched ${result.rows.length} topics`);
+    console.log(`Successfully fetched ${result.rows.length} topics with pricing`);
 
     return NextResponse.json({
       success: true,

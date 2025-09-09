@@ -1,3 +1,5 @@
+// app/dashboard/page.tsx
+
 "use client";
 
 import { useAuth } from "../contexts/AuthContext";
@@ -212,7 +214,8 @@ export default function Dashboard() {
           fetch(`/api/get-user-topics?user_id=${user?.id}`),
           fetch(`/api/check-subscription?user_id=${user?.id}`),
           fetch(`/api/get-user-preferences?user_id=${user?.id}`),
-          fetch(`/api/verify-payment?user_id=${user?.id}`), 
+          // CORRECTED API CALL: Fetch from the new payment history endpoint
+          fetch(`/api/get-payment-history?user_id=${user?.id}`), 
           fetch(`/api/get-topic-content?user_id=${user?.id}`), 
         ];
 
@@ -376,7 +379,6 @@ export default function Dashboard() {
       [topicId]: !prev[topicId]
     }));
     
-    // Fetch content if expanding and not already loaded
     if (!expandedTopics[topicId] && !topicContentData[topicId]) {
       fetchTopicContent(topicId);
     }
@@ -387,7 +389,6 @@ export default function Dashboard() {
     setShowContentModal(true);
   };
 
-  // Helper function to format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-IN", {
       year: "numeric",
@@ -396,7 +397,6 @@ export default function Dashboard() {
     });
   };
   
-  // Helper function to get currency symbol
   const getCurrencySymbol = (currency: string) => {
     const symbols: { [key: string]: string } = {
       INR: "₹",
@@ -406,18 +406,17 @@ export default function Dashboard() {
     return symbols[currency?.toUpperCase()] || currency;
   };
   
-  // Helper function to check if topic is expired
   const isTopicExpired = (expiresAt: string | null) => {
-    if (!expiresAt) return false;
+    if (!expiresAt) return false; // Never expires if null
     return new Date(expiresAt) < new Date();
   };
 
-  // Helper function to get status color
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'active':
       case 'captured':
       case 'success':
+      case 'completed':
         return 'bg-green-100 text-green-700';
       case 'expired':
       case 'failed':
@@ -429,7 +428,6 @@ export default function Dashboard() {
     }
   };
 
-  // Helper function to get progress percentage
   const getProgressPercentage = (delivered: number, total: number) => {
     if (total === 0) return 0;
     return Math.round((delivered / total) * 100);
@@ -448,7 +446,6 @@ export default function Dashboard() {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 px-4">
@@ -469,10 +466,8 @@ export default function Dashboard() {
     );
   }
 
-  // Content Modal Component
   const ContentModal = () => {
     if (!showContentModal || !selectedContent) return null;
-
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
@@ -506,7 +501,6 @@ export default function Dashboard() {
     );
   };
   
-  // Render user topics with enhanced content display
   const renderUserTopics = () => (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -525,8 +519,7 @@ export default function Dashboard() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {userTopics.map((topic, index) => {
             const expired = isTopicExpired(topic.expires_at);
-            const summary = topicsSummary.find(s => s.topic_id === topic.topic_id);
-            const progressPercentage = summary ? getProgressPercentage(summary.delivered_count, summary.total_content_days) : 0;
+            const status = expired ? 'expired' : topic.status;
             
             return (
               <div
@@ -538,13 +531,9 @@ export default function Dashboard() {
                     {topic.topic_name}
                   </h3>
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ml-2 ${
-                      expired
-                        ? "bg-red-100 text-red-700"
-                        : getStatusColor(topic.status)
-                    }`}
+                    className={`px-2 py-1 rounded-full text-xs font-medium ml-2 whitespace-nowrap ${getStatusColor(status)}`}
                   >
-                    {expired ? "Expired" : topic.status}
+                    {status}
                   </span>
                 </div>
                 
@@ -553,32 +542,11 @@ export default function Dashboard() {
                     {topic.topic_description}
                   </p>
                 )}
-
-                {/* Progress Bar */}
-                {/* {summary && (
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                      <span>Progress</span>
-                      <span>{summary.delivered_count}/{summary.total_content_days} days</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${progressPercentage}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {progressPercentage}% completed
-                    </div>
-                  </div>
-                )} */}
-
-                <div className="space-y-2 text-sm text-gray-600">
+                <div className="space-y-2 text-sm text-gray-600 border-t pt-3 mt-3">
                   <div className="flex justify-between">
                     <span>Plan:</span>
                     <span className="font-medium">{topic.plan_name}</span>
                   </div>
-                  
                   <div className="flex justify-between">
                     <span>Amount Paid:</span>
                     <span className="font-medium">
@@ -591,7 +559,7 @@ export default function Dashboard() {
                       {formatDate(topic.purchased_date)}
                     </span>
                   </div>
-                  {topic.expires_at && (
+                  {topic.expires_at && new Date(topic.expires_at).getFullYear() < 2099 && (
                     <div className="flex justify-between">
                       <span>Expires:</span>
                       <span className={`font-medium ${expired ? "text-red-600" : ""}`}>
@@ -599,17 +567,7 @@ export default function Dashboard() {
                       </span>
                     </div>
                   )}
-                  {topic.payment_id && (
-                    <div className="flex justify-between">
-                      <span>Payment ID:</span>
-                      <span className="font-medium text-xs">
-                        {topic.payment_id.substring(0, 10)}...
-                      </span>
-                    </div>
-                  )}
                 </div>
-
-                {/* View Content Button */}
                 {!expired && (
                   <button
                     onClick={() => {
@@ -646,9 +604,8 @@ export default function Dashboard() {
     </div>
   );
 
-  // Render content library with day-wise content
   const renderContentLibrary = () => (
-    <div className="space-y-4 sm:space-y-6">
+     <div className="space-y-4 sm:space-y-6">
       <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
         <FileText className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
         Content Library
@@ -659,11 +616,9 @@ export default function Dashboard() {
           {topicsSummary.map((summary) => {
             const isExpanded = expandedTopics[summary.topic_id];
             const contentData = topicContentData[summary.topic_id];
-            const progressPercentage = getProgressPercentage(summary.delivered_count, summary.total_content_days);
             
             return (
               <div key={summary.topic_id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                {/* Topic Header */}
                 <div 
                   className="p-4 sm:p-6 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => toggleTopicExpansion(summary.topic_id)}
@@ -673,42 +628,11 @@ export default function Dashboard() {
                       <h3 className="text-lg font-semibold text-gray-800 mb-2">
                         {summary.topic_name}
                       </h3>
-                      
-                      {/* Progress Stats */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-3">
-                        {/* <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{summary.total_content_days}</div>
-                          <div className="text-xs text-gray-500">Total Days</div>
-                        </div> */}
-                        {/* <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600">{summary.delivered_count}</div>
-                          <div className="text-xs text-gray-500">Delivered</div>
-                        </div> */}
-                        {/* <div className="text-center">
-                          <div className="text-2xl font-bold text-yellow-600">{summary.pending_count}</div>
-                          <div className="text-xs text-gray-500">Pending</div>
-                        </div> */}
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-600">{summary.current_day}</div>
-                          <div className="text-xs text-gray-500">Current Day</div>
-                        </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">{summary.current_day}</div>
+                        <div className="text-xs text-gray-500">Current Day</div>
                       </div>
-
-                      {/* Progress Bar */}
-                      {/* <div className="mb-2">
-                        <div className="flex justify-between text-sm text-gray-600 mb-1">
-                          <span>Learning Progress</span>
-                          <span>{progressPercentage}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${progressPercentage}%` }}
-                          ></div>
-                        </div>
-                      </div> */}
                     </div>
-                    
                     <div className="ml-4">
                       {isExpanded ? (
                         <ChevronDown className="w-6 h-6 text-gray-400" />
@@ -718,8 +642,6 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-
-                {/* Expanded Content */}
                 {isExpanded && (
                   <div className="border-t bg-gray-50">
                     {contentData ? (
@@ -727,14 +649,12 @@ export default function Dashboard() {
                         <h4 className="text-md font-semibold text-gray-800 mb-4">
                           Content Schedule ({contentData.content.length} days)
                         </h4>
-                        
                         <div className="space-y-3 max-h-96 overflow-y-auto">
                           {contentData.content.map((content) => {
                             const progressItem = contentData.user_progress.find(
                               p => p.day_number === content.day_number
                             );
                             const isDelivered = progressItem?.is_sent || false;
-                            const isScheduled = !!progressItem && !progressItem.is_sent;
                             
                             return (
                               <div
@@ -742,8 +662,6 @@ export default function Dashboard() {
                                 className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
                                   isDelivered 
                                     ? 'bg-green-50 border-green-200' 
-                                    : isScheduled 
-                                    ? 'bg-yellow-50 border-yellow-200' 
                                     : 'bg-white border-gray-200'
                                 }`}
                               >
@@ -751,66 +669,32 @@ export default function Dashboard() {
                                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                                     isDelivered 
                                       ? 'bg-green-500 text-white' 
-                                      : isScheduled 
-                                      ? 'bg-yellow-500 text-white' 
                                       : 'bg-gray-300 text-gray-600'
                                   }`}>
                                     {content.day_number}
                                   </div>
-                                  
                                   <div className="flex-1 min-w-0">
                                     <h5 className="font-medium text-gray-800 truncate">
                                       {content.title}
                                     </h5>
-                                    {content.description && (
-                                      <p className="text-sm text-gray-600 truncate">
-                                        {content.description}
-                                      </p>
-                                    )}
-                                    {progressItem?.delivered_on && (
-                                      <p className="text-xs text-gray-500">
-                                        Delivered: {formatDate(progressItem.delivered_on)}
-                                      </p>
-                                    )}
                                   </div>
                                 </div>
-
-                                <div className="flex items-center space-x-2">
-                                  {isDelivered && (
-                                    <CheckCircle className="w-5 h-5 text-green-500" />
-                                  )}
-                                  {isScheduled && (
-                                    <Clock className="w-5 h-5 text-yellow-500" />
-                                  )}
-                                  
-                                  {/* View Content Button - only show for delivered content */}
-                                  {isDelivered && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleViewContent(content);
-                                      }}
-                                      className="text-blue-600 hover:text-blue-800 p-1"
-                                      title="View content"
-                                    >
-                                      <Eye className="w-4 h-4" />
-                                    </button>
-                                  )}
-                                </div>
+                                {isDelivered && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewContent(content);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 p-1"
+                                    title="View content"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                )}
                               </div>
                             );
                           })}
                         </div>
-
-                        {/* Next Delivery Info */}
-                        {contentData.next_delivery_date && (
-                          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                            <div className="flex items-center text-sm text-blue-800">
-                              <Clock className="w-4 h-4 mr-2" />
-                              Next content scheduled for delivery
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ) : (
                       <div className="p-4 sm:p-6 text-center">
@@ -831,7 +715,7 @@ export default function Dashboard() {
             No content available
           </h3>
           <p className="text-gray-600 mb-6">
-            Purchase topics to access their content library and start your learning journey.
+            Purchase topics to access their content library.
           </p>
           <button
             onClick={() => router.push("/topic-selection")}
@@ -844,87 +728,6 @@ export default function Dashboard() {
     </div>
   );
 
-  // Render subscriptions
-  const renderSubscriptions = () => (
-    <div className="space-y-4 sm:space-y-6">
-      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
-        <Calendar className="mr-2 sm:mr-3 text-blue-600 w-5 h-5 sm:w-6 sm:h-6" />
-        Traditional Subscriptions
-      </h2>
-      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
-        {subscription ? (
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
-              <h3 className="text-lg font-semibold">
-                {subscription.plan_name}
-              </h3>
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium self-start sm:self-auto ${getStatusColor(subscription.status)}`}
-              >
-                {subscription.status}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-              <div>
-                <h4 className="font-medium text-gray-700">Plan Amount</h4>
-                <p className="text-gray-800">
-                  {getCurrencySymbol(subscription.currency)}
-                  {subscription.amount}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-700">Start Date</h4>
-                <p className="text-gray-800">
-                  {formatDate(subscription.start_date)}
-                </p>
-              </div>
-              {subscription.next_renewal_date && (
-                <div>
-                  <h4 className="font-medium text-gray-700">Next Renewal</h4>
-                  <p className="text-gray-800">
-                    {formatDate(subscription.next_renewal_date)}
-                  </p>
-                </div>
-              )}
-              <div>
-                <h4 className="font-medium text-gray-700">Auto Renewal</h4>
-                <p className="text-gray-800">
-                  {subscription.auto_renewal ? "Enabled" : "Disabled"}
-                </p>
-              </div>
-            </div>
-            {subscription.status === "active" && subscription.auto_renewal && (
-              <div className="bg-blue-50 p-4 rounded-lg mt-4">
-                <p className="text-blue-800 text-sm">
-                  Your subscription will automatically renew on{" "}
-                  {subscription.next_renewal_date &&
-                    formatDate(subscription.next_renewal_date)}
-                </p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <Calendar className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              No Active Subscription
-            </h3>
-            <p className="text-gray-600 mb-6">
-              You don't have any traditional subscription. You can purchase individual topics instead.
-            </p>
-            <button
-              onClick={() => router.push("/topic-selection")}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Browse Topics
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  // Render settings
   const renderSettings = () => (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -943,9 +746,8 @@ export default function Dashboard() {
         )}
       </div>
       <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg">
-        {preferences ? (
+        {preferences && editedPreferences ? (
           <div className="space-y-6">
-            {/* User Profile Section */}
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                 <User className="mr-2 w-5 h-5" />
@@ -953,155 +755,41 @@ export default function Dashboard() {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name
-                  </label>
-                  <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
-                    {user?.name || "Not provided"}
-                  </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">{user?.name || "Not provided"}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
-                  <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
-                    {user?.email || "Not provided"}
-                  </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">{user?.email || "Not provided"}</p>
                 </div>
               </div>
             </div>
-            {/* Learning Preferences Section */}
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 Learning Preferences
               </h3>
-              
-              {editingPreferences && editedPreferences ? (
+              {editingPreferences ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Role
-                      </label>
-                      <select
-                        value={editedPreferences.role}
-                        onChange={(e) =>
-                          setEditedPreferences({
-                            ...editedPreferences,
-                            role: e.target.value,
-                          })
-                        }
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {roleOptions.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                      <select value={editedPreferences.role} onChange={(e) => setEditedPreferences({...editedPreferences, role: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        {roleOptions.map((role) => (<option key={role} value={role}>{role}</option>))}
                       </select>
                     </div>
-                    
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Industry
-                      </label>
-                      <select
-                        value={editedPreferences.industry}
-                        onChange={(e) =>
-                          setEditedPreferences({
-                            ...editedPreferences,
-                            industry: e.target.value,
-                          })
-                        }
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {industryOptions.map((industry) => (
-                          <option key={industry} value={industry}>
-                            {industry}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Language
-                      </label>
-                      <select
-                        value={editedPreferences.language}
-                        onChange={(e) =>
-                          setEditedPreferences({
-                            ...editedPreferences,
-                            language: e.target.value,
-                          })
-                        }
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {languageOptions.map((language) => (
-                          <option key={language} value={language}>
-                            {language}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Preferred Mode
-                      </label>
-                      <select
-                        value={editedPreferences.preferred_mode}
-                        onChange={(e) =>
-                          setEditedPreferences({
-                            ...editedPreferences,
-                            preferred_mode: e.target.value,
-                          })
-                        }
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {modeOptions.map((mode) => (
-                          <option key={mode} value={mode}>
-                            {mode}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Frequency
-                      </label>
-                      <select
-                        value={editedPreferences.frequency}
-                        onChange={(e) =>
-                          setEditedPreferences({
-                            ...editedPreferences,
-                            frequency: e.target.value,
-                          })
-                        }
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {frequencyOptions.map((frequency) => (
-                          <option key={frequency} value={frequency}>
-                            {frequency}
-                          </option>
-                        ))}
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                      <select value={editedPreferences.industry} onChange={(e) => setEditedPreferences({...editedPreferences, industry: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        {industryOptions.map((industry) => (<option key={industry} value={industry}>{industry}</option>))}
                       </select>
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                    <button
-                      onClick={handleSavePreferences}
-                      disabled={saving}
-                      className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                    >
+                    <button onClick={handleSavePreferences} disabled={saving} className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50">
                       <Save className="w-4 h-4" />
                       {saving ? "Saving..." : "Save Changes"}
                     </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="flex items-center justify-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-                    >
+                    <button onClick={handleCancelEdit} className="flex items-center justify-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
                       <X className="w-4 h-4" />
                       Cancel
                     </button>
@@ -1110,44 +798,12 @@ export default function Dashboard() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Role
-                    </label>
-                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
-                      {preferences.role}
-                    </p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">{preferences.role}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Industry
-                    </label>
-                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
-                      {preferences.industry}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Language
-                    </label>
-                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
-                      {preferences.language}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Preferred Mode
-                    </label>
-                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
-                      {preferences.preferred_mode}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Frequency
-                    </label>
-                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
-                      {preferences.frequency}
-                    </p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                    <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">{preferences.industry}</p>
                   </div>
                 </div>
               )}
@@ -1156,9 +812,7 @@ export default function Dashboard() {
         ) : (
           <div className="text-center py-8">
             <Settings className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              No Preferences Set
-            </h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No Preferences Set</h3>
             <p className="text-gray-600">Please set your preferences to personalize your experience.</p>
           </div>
         )}
@@ -1166,7 +820,6 @@ export default function Dashboard() {
     </div>
   );
 
-  // Render payment history
   const renderPaymentHistory = () => (
     <div className="space-y-4 sm:space-y-6">
       <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
@@ -1209,12 +862,8 @@ export default function Dashboard() {
       ) : (
         <div className="bg-white rounded-xl p-8 shadow-lg text-center">
           <CreditCard className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">
-            No Payment History Found
-          </h3>
-          <p className="text-gray-600">
-            Your payment transactions will appear here once you make a purchase.
-          </p>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">No Payment History Found</h3>
+          <p className="text-gray-600">Your payment transactions will appear here once you make a purchase.</p>
         </div>
       )}
     </div>
@@ -1238,7 +887,6 @@ export default function Dashboard() {
   return (
     <RouteGuard>
       <div className="flex h-screen bg-gray-50 font-sans">
-        {/* Sidebar */}
         <aside
           className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -1286,9 +934,7 @@ export default function Dashboard() {
           </div>
         </aside>
 
-        {/* Main content */}
         <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out md:ml-64">
-          {/* Top bar */}
           <header className="flex items-center justify-between md:justify-end h-16 bg-white border-b px-4">
             <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-600">
               <Menu size={24} />
@@ -1299,10 +945,9 @@ export default function Dashboard() {
           </header>
           
           <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-            {/* Tabs */}
             <div className="mb-6">
               <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-4 sm:space-x-8" aria-label="Tabs">
+                <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto" aria-label="Tabs">
                   {tabItems.map((tab) => (
                     <button
                       key={tab.id}
@@ -1321,14 +966,13 @@ export default function Dashboard() {
               </div>
             </div>
             
-            {/* Tab Content */}
             <div>
               {renderContent()}
             </div>
           </main>
         </div>
-        </div>
-      {/* </div> */}
+      </div>
+      <ContentModal />
     </RouteGuard>
   );
 }

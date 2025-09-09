@@ -4,7 +4,7 @@ import Header from "./components/Header";
 import HeroSection from "./components/HeroSection";
 
 import HowItWorksSection from "./components/HowItWorksSection";
-import PricingSection from "./components/PricingSection";
+// import PricingSection from "./components/PricingSection";
 import WhatYouGetSection from "./components/WhatYouGetSection";
 import WhyItWorksSection from "./components/WhyItWorksSection";
 import RoleSpecificSection from './components/RoleSpecificSection';
@@ -26,7 +26,7 @@ export default function Home() {
       <RoleSpecificSection />
       <WhyItWorksSection />
       <SeeDifferenceSection/>
-      <PricingSection />
+      {/* <PricingSection /> */}
       {/* <CTASection /> */}
       <FAQSection/>
       <Footer />

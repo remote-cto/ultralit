@@ -1,4 +1,4 @@
-// Modified TopicSelection.tsx - Key changes for per-topic payment
+// app/pages/topic-selection.tsx
 
 "use client";
 
@@ -8,6 +8,7 @@ import { useAuth } from "../contexts/AuthContext";
 import Header from "./Header";
 import Footer from "./Footer";
 
+// CHANGE 1: Update the Topic interface to include pricing details
 interface Topic {
   id: number;
   name: string;
@@ -17,6 +18,9 @@ interface Topic {
   domain_id?: number;
   is_microlearning?: boolean;
   is_trending?: boolean;
+  price: number; // NEW
+  currency: string; // NEW
+  access_duration_days: number; // NEW
 }
 
 interface Domain {
@@ -34,7 +38,6 @@ interface Category {
   is_active: boolean;
 }
 
-// Add interface for user's purchased topics
 interface UserTopic {
   topic_id: number;
   topic_name: string;
@@ -59,8 +62,6 @@ const TopicSelection = () => {
   const [selectedSubCategory, setSelectedSubCategory] = useState<number | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [userIndustry, setUserIndustry] = useState<string | null>(null);
-  
-  // Add state for user's purchased topics
   const [userTopics, setUserTopics] = useState<UserTopic[]>([]);
   const [loadingUserTopics, setLoadingUserTopics] = useState(false);
 
@@ -68,16 +69,14 @@ const TopicSelection = () => {
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
 
-  // Initialize data on component mount
   useEffect(() => {
     initializeData();
     if (isAuthenticated && user?.id) {
       fetchUserIndustry();
-      fetchUserTopics(); // Fetch user's purchased topics
+      fetchUserTopics();
     }
   }, [isAuthenticated, user]);
 
-  // Handle redirect after authentication
   useEffect(() => {
     const redirect = searchParams.get("redirect");
     if (redirect === "topic-selection" && isAuthenticated) {
@@ -98,10 +97,8 @@ const TopicSelection = () => {
     }
   }, [searchParams, isAuthenticated]);
 
-  // Fetch user's purchased topics
   const fetchUserTopics = async () => {
     if (!user?.id) return;
-    
     setLoadingUserTopics(true);
     try {
       const res = await fetch(`/api/get-user-topics?user_id=${user.id}`);
@@ -118,41 +115,30 @@ const TopicSelection = () => {
     }
   };
 
-  // Check if user has already purchased a topic
   const isTopicPurchased = (topicId: number) => {
-    return userTopics.some(ut => ut.topic_id === topicId && ut.payment_status === 'completed');
+    return userTopics.some(ut => ut.topic_id === topicId);
   };
 
   const initializeData = async () => {
     setLoading(true);
     try {
-      console.log("Starting to fetch domains and categories...");
-      
       const [domainsRes, categoriesRes] = await Promise.all([
         fetch("/api/fetch-domains"),
-        fetch("/api/fetch-categories")
+        fetch("/api/fetch-categories"),
       ]);
-
-      console.log("Domains response status:", domainsRes.status);
-      console.log("Categories response status:", categoriesRes.status);
-
       const domainsData = await domainsRes.json();
       const categoriesData = await categoriesRes.json();
-
-      console.log("Domains data:", domainsData);
-      console.log("Categories data:", categoriesData);
-
       if (domainsData.success) {
-        console.log("Setting domains:", domainsData.domains);
         setDomains(domainsData.domains || []);
       } else {
         console.error("Failed to fetch domains:", domainsData.error);
       }
-      
       if (categoriesData.success) {
         const allCategories = categoriesData.categories || [];
         setCategories(allCategories);
-        setParentCategories(allCategories.filter((cat: Category) => cat.parent_id === null));
+        setParentCategories(
+          allCategories.filter((cat: Category) => cat.parent_id === null)
+        );
       } else {
         console.error("Failed to fetch categories:", categoriesData.error);
       }
@@ -167,10 +153,8 @@ const TopicSelection = () => {
     try {
       const res = await fetch(`/api/user-preference?user_id=${user?.id}`);
       if (!res.ok) return;
-
       const text = await res.text();
       if (!text) return;
-
       const data = JSON.parse(text);
       if (data.success && data.preferences?.industry) {
         setUserIndustry(data.preferences.industry);
@@ -185,7 +169,11 @@ const TopicSelection = () => {
     try {
       const res = await fetch(`/api/fetch-topics?${params}`);
       const data = await res.json();
-      if (data.success) setTopics(data.topics || []);
+      if (data.success) {
+        setTopics(data.topics || []);
+      } else {
+         console.error("Failed to fetch topics:", data.error);
+      }
     } catch (error) {
       console.error("Error fetching topics:", error);
     } finally {
@@ -244,7 +232,6 @@ const TopicSelection = () => {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     resetSelections();
-
     if (tab === "MicroSkill") fetchTopics("is_microlearning=true");
     else if (tab === "Trending") fetchTopics("is_trending=true");
   };
@@ -253,7 +240,7 @@ const TopicSelection = () => {
     router.push("/auth?redirect=topic-selection");
   };
 
-  // Modified handleNext to redirect to payment for each topic
+  // CHANGE 3: Update handleNext to pass all pricing details to the payment page
   const handleNext = async () => {
     if (!selectedTopic) {
       alert("Please select one topic to continue");
@@ -263,7 +250,10 @@ const TopicSelection = () => {
     if (!isAuthenticated) {
       sessionStorage.setItem("pendingTopicSelection", selectedTopic.toString());
       if (selectedDomain) {
-        sessionStorage.setItem("pendingDomainSelection", selectedDomain.toString());
+        sessionStorage.setItem(
+          "pendingDomainSelection",
+          selectedDomain.toString()
+        );
       }
       setShowAuthPrompt(true);
       return;
@@ -274,18 +264,23 @@ const TopicSelection = () => {
       return;
     }
 
-    // Check if topic is already purchased
     if (isTopicPurchased(selectedTopic)) {
       alert("You have already purchased this topic! You can access it from your dashboard.");
       router.push("/dashboard");
       return;
     }
 
-    // Store selected topic in session and redirect to payment
-    sessionStorage.setItem("selectedTopicForPayment", selectedTopic.toString());
-    sessionStorage.setItem("selectedTopicName", topics.find(t => t.id === selectedTopic)?.name || "");
-    
-    // Always redirect to payment page for topic purchase
+    const topicDetails = topics.find((t) => t.id === selectedTopic);
+    if (!topicDetails) {
+      alert("Could not find topic details. Please re-select.");
+      return;
+    }
+
+    sessionStorage.setItem("selectedTopicForPayment", topicDetails.id.toString());
+    sessionStorage.setItem("selectedTopicName", topicDetails.name);
+    sessionStorage.setItem("selectedTopicPrice", topicDetails.price.toString());
+    sessionStorage.setItem("selectedTopicDuration", topicDetails.access_duration_days.toString());
+
     router.push("/payment");
   };
 
@@ -299,11 +294,11 @@ const TopicSelection = () => {
   const CategoryCard = ({ item, onClick, isHighlighted = false }: any) => (
     <div
       onClick={onClick}
-      className={`p-4 sm:p-6 border-2 rounded-lg sm:rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg
-        ${isHighlighted 
-          ? "border-blue-400 bg-blue-50 shadow-md" 
+      className={`p-4 sm:p-6 border-2 rounded-lg sm:rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg ${
+        isHighlighted
+          ? "border-blue-400 bg-blue-50 shadow-md"
           : "border-gray-200 bg-white hover:border-yellow-400"
-        }`}
+      }`}
     >
       {isHighlighted && (
         <div className="mb-2">
@@ -317,7 +312,6 @@ const TopicSelection = () => {
     </div>
   );
 
-  // Modified TopicsDisplay with purchase status indicators
   const TopicsDisplay = ({ title, backAction }: { title: string; backAction?: () => void }) => (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
@@ -342,23 +336,21 @@ const TopicSelection = () => {
 
       {!loading && topics.length > 0 && (
         <div className="space-y-4 sm:space-y-6">
-          {/* Horizontal Topics Display with purchase status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
             {topics.map((topic) => {
               const isPurchased = isTopicPurchased(topic.id);
               const isSelected = selectedTopic === topic.id;
-              
               return (
                 <div key={topic.id} className="relative">
                   <button
                     onClick={() => handleTopicSelect(topic.id)}
-                    className={`w-full px-3 py-2 sm:px-4 sm:py-3 rounded-full font-medium transition-all duration-200 cursor-pointer text-xs sm:text-sm text-center
-                      ${isPurchased
+                    className={`w-full px-3 py-2 sm:px-4 sm:py-3 rounded-full font-medium transition-all duration-200 cursor-pointer text-xs sm:text-sm text-center ${
+                      isPurchased
                         ? "bg-green-100 border-2 border-green-400 text-green-800"
                         : isSelected
                         ? "bg-yellow-400 text-black shadow-lg scale-105"
                         : "bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:shadow-md hover:scale-102"
-                      }`}
+                    }`}
                   >
                     {topic.name}
                   </button>
@@ -372,25 +364,47 @@ const TopicSelection = () => {
             })}
           </div>
 
-          {/* Selected Topic Details with purchase status */}
           {selectedTopic && (
-            <div className={`border-2 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg ${
-              isTopicPurchased(selectedTopic) 
-                ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200" 
-                : "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200"
-            }`}>
+            <div
+              className={`border-2 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg ${
+                isTopicPurchased(selectedTopic)
+                  ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
+                  : "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200"
+              }`}
+            >
               <div className="flex items-start justify-between mb-4">
                 <h4 className="text-lg sm:text-2xl font-bold text-gray-800 flex-1 mr-2">
                   {topics.find((t) => t.id === selectedTopic)?.name}
                 </h4>
-                <span className={`px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${
-                  isTopicPurchased(selectedTopic)
-                    ? "bg-green-100 text-green-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}>
+                <span
+                  className={`px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${
+                    isTopicPurchased(selectedTopic)
+                      ? "bg-green-100 text-green-800"
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}
+                >
                   {isTopicPurchased(selectedTopic) ? "Purchased" : "Selected"}
                 </span>
               </div>
+              
+              {/* CHANGE 2: Add the price display here */}
+              <div className="my-4 text-center bg-yellow-100 p-3 rounded-lg border border-yellow-300">
+                <span className="text-gray-600 text-sm">Price</span>
+                <p className="text-3xl font-bold text-gray-800">
+                  {topics.find(t => t.id === selectedTopic)?.price === 0 
+                      ? "Free" 
+                      : `₹${topics.find(t => t.id === selectedTopic)?.price}`
+                  }
+                </p>
+                <p className="text-xs text-gray-500">
+                  {
+                      (topics.find(t => t.id === selectedTopic)?.access_duration_days || 0) >= 9999
+                      ? "One-time payment for lifetime access"
+                      : `One-time payment for ${topics.find(t => t.id === selectedTopic)?.access_duration_days} days access`
+                  }
+                </p>
+              </div>
+
               <div className="text-gray-700 mb-4">
                 <p className="mb-2 text-sm sm:text-base">
                   <strong className="text-gray-800">What You'll Learn:</strong>
@@ -400,7 +414,6 @@ const TopicSelection = () => {
                 </p>
               </div>
               
-              {/* Purchase status message */}
               {isTopicPurchased(selectedTopic) && (
                 <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg">
                   <p className="text-green-800 text-sm">
@@ -409,7 +422,6 @@ const TopicSelection = () => {
                 </div>
               )}
               
-              {/* Badges for special topics */}
               <div className="flex flex-wrap gap-2">
                 {topics.find((t) => t.id === selectedTopic)?.is_microlearning && (
                   <span className="inline-block px-2 py-1 sm:px-3 bg-green-100 text-green-800 text-xs sm:text-sm rounded-full">
@@ -453,7 +465,6 @@ const TopicSelection = () => {
             </div>
           )}
 
-          {/* Show user's purchased topics count */}
           {isAuthenticated && userTopics.length > 0 && (
             <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-green-800 text-xs sm:text-sm">
@@ -570,91 +581,11 @@ const TopicSelection = () => {
       )}
 
       {!loading && topics.length > 0 && (
-        <div className="space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
-            {topics.map((topic) => {
-              const isPurchased = isTopicPurchased(topic.id);
-              const isSelected = selectedTopic === topic.id;
-              
-              return (
-                <div key={topic.id} className="relative">
-                  <button
-                    onClick={() => handleTopicSelect(topic.id)}
-                    className={`w-full px-3 py-2 sm:px-4 sm:py-3 rounded-full font-medium transition-all duration-200 cursor-pointer text-xs sm:text-sm text-center
-                      ${isPurchased
-                        ? "bg-green-100 border-2 border-green-400 text-green-800"
-                        : isSelected
-                        ? "bg-yellow-400 text-black shadow-lg scale-105"
-                        : "bg-white border border-gray-300 text-gray-700 hover:border-yellow-400 hover:shadow-md hover:scale-102"
-                      }`}
-                  >
-                    {topic.name}
-                  </button>
-                  {isPurchased && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs">✓</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {selectedTopic && (
-            <div className={`border-2 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg ${
-              isTopicPurchased(selectedTopic) 
-                ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200" 
-                : "bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200"
-            }`}>
-              <div className="flex items-start justify-between mb-4">
-                <h4 className="text-lg sm:text-2xl font-bold text-gray-800 flex-1 mr-2">
-                  {topics.find((t) => t.id === selectedTopic)?.name}
-                </h4>
-                <span className={`px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${
-                  isTopicPurchased(selectedTopic)
-                    ? "bg-green-100 text-green-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}>
-                  {isTopicPurchased(selectedTopic) ? "Purchased" : "Selected"}
-                </span>
-              </div>
-              <div className="text-gray-700 mb-4">
-                <p className="mb-2 text-sm sm:text-base">
-                  <strong className="text-gray-800">What You'll Learn:</strong>
-                </p>
-                <p className="leading-relaxed text-sm sm:text-base">
-                  {topics.find((t) => t.id === selectedTopic)?.description}
-                </p>
-              </div>
-              
-              {isTopicPurchased(selectedTopic) && (
-                <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg">
-                  <p className="text-green-800 text-sm">
-                    You have already purchased this topic! You can access it from your dashboard.
-                  </p>
-                </div>
-              )}
-              
-              <div className="flex flex-wrap gap-2">
-                {topics.find((t) => t.id === selectedTopic)?.is_microlearning && (
-                  <span className="inline-block px-2 py-1 sm:px-3 bg-green-100 text-green-800 text-xs sm:text-sm rounded-full">
-                    🎯 Micro Learning
-                  </span>
-                )}
-                {topics.find((t) => t.id === selectedTopic)?.is_trending && (
-                  <span className="inline-block px-2 py-1 sm:px-3 bg-red-100 text-red-800 text-xs sm:text-sm rounded-full">
-                    🔥 Trending Now
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+         <TopicsDisplay title={`${activeTab} Topics`} />
       )}
     </div>
   );
 
-  // Modified NavigationButtons with purchase status
   const NavigationButtons = () => (
     <div className="mt-6 sm:mt-8 bg-gradient-to-r from-gray-50 to-yellow-50 border border-yellow-200 p-4 sm:p-6 rounded-lg sm:rounded-xl shadow-sm">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -731,27 +662,22 @@ const TopicSelection = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-50 to-yellow-50" style={{ fontFamily: "'Segoe UI', sans-serif" }}>
       <Header />
-
       <div className="flex-1">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-6xl">
-          {/* Header */}
           <div className="text-center mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2 sm:mb-4">Explore Topics</h2>
             <p className="text-base sm:text-lg text-gray-600 mb-2 sm:mb-4">
               Choose topics that match your learning goals - purchase individual topics as you go!
             </p>
-
             {isAuthenticated && user?.name && (
               <div className="mt-4 p-3 sm:p-4 bg-green-100 rounded-lg border border-green-200">
                 <p className="text-green-800 text-xs sm:text-sm">
-                  Welcome back, {user.name}! 
+                  Welcome back, {user.name}!
                   {userTopics.length > 0 && ` You have ${userTopics.length} topic${userTopics.length !== 1 ? 's' : ''} in your library.`}
                 </p>
               </div>
             )}
           </div>
-
-          {/* Tabs - Horizontal scrollable on mobile */}
           <div className="mb-6 sm:mb-8 border-b border-gray-300">
             <div className="flex justify-start sm:justify-center gap-2 sm:gap-4 lg:gap-8 overflow-x-auto pb-3">
               {TABS.map((tab) => (
@@ -769,18 +695,14 @@ const TopicSelection = () => {
               ))}
             </div>
           </div>
-
-          {/* Content Area */}
           <div className="bg-white rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 border border-yellow-200 min-h-[400px] sm:min-h-[500px]">
             {activeTab === "Learn by Industry" && renderDomainView()}
             {activeTab === "Learn by Topic" && renderTopicView()}
             {(activeTab === "MicroSkill" || activeTab === "Trending") && renderTopicsListView()}
-            
             <NavigationButtons />
           </div>
         </div>
       </div>
-
       <Footer />
       <AuthPromptModal />
     </div>
