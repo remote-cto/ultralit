@@ -137,7 +137,7 @@ const PaymentPage = () => {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: data.order.amount,
         currency: data.order.currency,
-        name: "Your Platform Name",
+        name: "XWorks",
         description: `Payment for topic: ${topic.name}`,
         order_id: data.order.id,
         handler: async function (response: any) {
